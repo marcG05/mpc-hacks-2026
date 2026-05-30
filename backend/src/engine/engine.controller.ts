@@ -1,8 +1,15 @@
-import { Controller, Get, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { EngineService } from './engine.service';
 
-@Controller("engine")
+@Controller('engine')
 export class EngineController {
   constructor(private readonly engine: EngineService) {}
 
@@ -13,7 +20,48 @@ export class EngineController {
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
     return this.engine.processTransactions(file);
+  }
+
+  @Post('analyze')
+  @UseInterceptors(FileInterceptor('file'))
+  async analyzeFile(@UploadedFile() file: Express.Multer.File) {
+    return this.engine.processTransactions(file);
+  }
+
+  @Get('transactions')
+  getTransactions() {
+    return this.engine.getTransactions();
+  }
+
+  @Get('decisions')
+  getDecisions() {
+    return this.engine.getDecisions();
+  }
+
+  @Get('summary')
+  getSummary() {
+    return this.engine.getSummary();
+  }
+
+  @Get('health')
+  async getHealth() {
+    return this.engine.getHealth();
+  }
+
+  @Post('decision')
+  recordDecision(
+    @Body()
+    body: {
+      tx: string;
+      card?: string;
+      action: string;
+      score?: number;
+      by?: string;
+      time?: string;
+    },
+  ) {
+    return this.engine.recordDecision(body);
   }
 }

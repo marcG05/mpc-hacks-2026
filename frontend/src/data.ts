@@ -29,12 +29,16 @@ function hist(base: number, spikeMult: number): number[] {
 }
 
 export const FRAUD_TYPES: Record<string, string> = {
-  ato:    "Account Takeover",
-  test:   "Card Testing",
-  cnp:    "Card-Not-Present",
-  velo:   "Velocity Abuse",
-  geo:    "Geo Anomaly",
-  farm:   "Device Farm",
+  ato:        "Account Takeover",
+  test:       "Card Testing",
+  cnp:        "Card-Not-Present",
+  velo:       "Velocity Abuse",
+  geo:        "Geo Anomaly",
+  farm:       "Device Farm",
+  fraud:      "Fraud",
+  suspicious: "Suspicious",
+  legitimate: "Legitimate",
+  unknown:    "Unknown",
 };
 
 // Build the flagged-transaction list
