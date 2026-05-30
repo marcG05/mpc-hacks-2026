@@ -1,7 +1,10 @@
-/* ============================================================
-   Fraud Hunter — app shell, router, shared state
-   ============================================================ */
-const { useState: useStateA, useEffect: useEffectA } = React;
+import { useState, useEffect } from 'react';
+import { FRAUD } from './data';
+import { Icon } from './components';
+import { Dashboard, ReviewQueue, DecisionLog, Upload } from './views';
+import { AIPanel } from './panel';
+import type { Transaction, LogEntry } from './types';
+import './styles.css';
 
 const NAV = [
   { key: "dashboard", label: "Transactions", icon: "grid" },
@@ -14,15 +17,22 @@ function nowTime() {
   return new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
-function App() {
-  const [route, setRoute] = useStateA("dashboard");
-  const [txns, setTxns] = useStateA(() => FRAUD.TX.map((t) => ({ ...t })));
-  const [log, setLog] = useStateA(() => [...FRAUD.LOG_SEED]);
-  const [selected, setSelected] = useStateA(null);
-  const [panelOpen, setPanelOpen] = useStateA(false);
-  const [toast, setToast] = useStateA(null);
-  const [updated] = useStateA(nowTime());
-  const [collapsed, setCollapsed] = useStateA(() => {
+const ACTION_META: Record<string, {label: string, icon: string, c: string}> = {
+  block:          { label: "Blocked",        c: "var(--critical)", icon: "block" },
+  clear:          { label: "Approved",       c: "var(--low)",      icon: "check" },
+  escalate:       { label: "Escalated",      c: "var(--violet)",   icon: "escalate" },
+  false_positive: { label: "False positive", c: "var(--text-2)",   icon: "flag" },
+};
+
+export default function App() {
+  const [route, setRoute] = useState("dashboard");
+  const [txns, setTxns] = useState<Transaction[]>(() => FRAUD.TX.map((t) => ({ ...t })));
+  const [log, setLog] = useState<LogEntry[]>(() => [...FRAUD.LOG_SEED]);
+  const [selected, setSelected] = useState<Transaction | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [toast, setToast] = useState<{msg: string, icon: string, color: string} | null>(null);
+  const [updated] = useState(nowTime());
+  const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem("fh_collapsed") === "1"; } catch (e) { return false; }
   });
 
@@ -36,19 +46,19 @@ function App() {
 
   const openQueue = txns.filter((t) => t.status === "flagged" || t.status === "review").length;
 
-  function showToast(msg, icon, color) {
+  function showToast(msg: string, icon: string, color: string) {
     setToast({ msg, icon, color });
-    clearTimeout(window.__toastT);
-    window.__toastT = setTimeout(() => setToast(null), 2600);
+    clearTimeout((window as any).__toastT);
+    (window as any).__toastT = setTimeout(() => setToast(null), 2600);
   }
 
-  function openPanel(tx) {
+  function openPanel(tx: Transaction) {
     setSelected(tx);
     setPanelOpen(true);
   }
 
-  function applyAction(action, tx) {
-    const statusMap = { block: "blocked", clear: "cleared", escalate: "escalated", false_positive: "false_positive" };
+  function applyAction(action: string, tx: Transaction) {
+    const statusMap: Record<string, any> = { block: "blocked", clear: "cleared", escalate: "escalated", false_positive: "false_positive" };
     const newStatus = statusMap[action];
     setTxns((prev) => prev.map((t) => (t.id === tx.id ? { ...t, status: newStatus } : t)));
     setLog((prev) => [
@@ -56,14 +66,14 @@ function App() {
         tx: tx.id, card: tx.card, action, score: tx.score, by: "L. Matkovski" },
       ...prev,
     ]);
-    const meta = ACTION_META[action];
+    const meta = ACTION_META[action] || ACTION_META.false_positive;
     showToast(`${tx.id} — ${meta.label}`, meta.icon, meta.c);
     if (panelOpen) setPanelOpen(false);
   }
 
   // Esc closes panel
-  useEffectA(() => {
-    function onKey(e) { if (e.key === "Escape" && panelOpen) setPanelOpen(false); }
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape" && panelOpen) setPanelOpen(false); }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [panelOpen]);
@@ -150,5 +160,3 @@ function App() {
     </div>
   );
 }
-
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);

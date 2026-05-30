@@ -1,14 +1,20 @@
-/* ============================================================
-   Fraud Hunter — views: Dashboard, ReviewQueue, DecisionLog, Upload
-   ============================================================ */
-const { useState: useStateV, useMemo: useMemoV, useEffect: useEffectV } = React;
+import { useState, useMemo, useEffect } from 'react';
+import { FRAUD } from './data';
+import { Icon, MetricCard, ScoreBar, StatusPill, Donut, SevTag, Sparkline, sigBgVar, sigColorVar, SEV_STYLE } from './components';
+import type { Transaction, LogEntry } from './types';
 
 /* ---------------- DASHBOARD ---------------- */
-function Dashboard({ txns, selectedId, onSelect }) {
-  const [filter, setFilter] = useStateV("all");
-  const [query, setQuery] = useStateV("");
+interface DashboardProps {
+  txns: Transaction[];
+  selectedId: string | null;
+  onSelect: (tx: Transaction) => void;
+}
 
-  const counts = useMemoV(() => {
+export function Dashboard({ txns, selectedId, onSelect }: DashboardProps) {
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+
+  const counts = useMemo(() => {
     const c = { all: txns.length, critical: 0, high: 0, review: 0, open: 0 };
     txns.forEach((t) => {
       const sev = FRAUD.sevOf(t.score);
@@ -20,7 +26,7 @@ function Dashboard({ txns, selectedId, onSelect }) {
     return c;
   }, [txns]);
 
-  const rows = useMemoV(() => {
+  const rows = useMemo(() => {
     return txns.filter((t) => {
       if (filter === "critical" && FRAUD.sevOf(t.score) !== "critical") return false;
       if (filter === "high" && FRAUD.sevOf(t.score) !== "high") return false;
@@ -36,7 +42,7 @@ function Dashboard({ txns, selectedId, onSelect }) {
   const atRisk = txns.filter((t) => t.status === "flagged" || t.status === "review")
     .reduce((s, t) => s + t.amount, 0);
   const confirmed = txns.filter((t) => t.status === "blocked" || t.status === "escalated").length;
-  const fpRate = Math.round(txns.filter((t) => t.status === "false_positive").length / txns.length * 100);
+  const fpRate = Math.round(txns.filter((t) => t.status === "false_positive").length / Math.max(1, txns.length) * 100);
 
   return (
     <div className="content">
@@ -71,7 +77,7 @@ function Dashboard({ txns, selectedId, onSelect }) {
             <div className="seg">
               {[["all", "All"], ["critical", "Critical"], ["high", "High"], ["review", "Under review"]].map(([k, l]) => (
                 <button key={k} className={filter === k ? "on" : ""} onClick={() => setFilter(k)}>
-                  {l} <span style={{ opacity: 0.6 }}>{counts[k]}</span>
+                  {l} <span style={{ opacity: 0.6 }}>{(counts as any)[k]}</span>
                 </button>
               ))}
             </div>
@@ -110,7 +116,7 @@ function Dashboard({ txns, selectedId, onSelect }) {
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan="7"><div className="empty-hint">No transactions match this filter.</div></td></tr>
+                <tr><td colSpan={7}><div className="empty-hint">No transactions match this filter.</div></td></tr>
               )}
             </tbody>
           </table>
@@ -153,7 +159,7 @@ function Dashboard({ txns, selectedId, onSelect }) {
             ].map(([name, pct, c], i) => (
               <div className="brk-row" key={i} style={{ marginBottom: 11 }}>
                 <div className="brk-name" style={{ width: 130 }}>{name}</div>
-                <div className="brk-bar"><i style={{ width: pct + "%", background: c }}></i></div>
+                <div className="brk-bar"><i style={{ width: pct + "%", background: c as string }}></i></div>
                 <div className="brk-val">{pct}</div>
               </div>
             ))}
@@ -181,14 +187,20 @@ function Dashboard({ txns, selectedId, onSelect }) {
 }
 
 /* ---------------- REVIEW QUEUE ---------------- */
-function ReviewQueue({ txns, onAction, onOpenPanel }) {
-  const queue = useMemoV(() => txns.filter((t) => t.status === "flagged" || t.status === "review"), [txns]);
-  const [idx, setIdx] = useStateV(0);
-  const [done, setDone] = useStateV(0);
+interface ReviewQueueProps {
+  txns: Transaction[];
+  onAction: (action: string, tx: Transaction) => void;
+  onOpenPanel: (tx: Transaction) => void;
+}
+
+export function ReviewQueue({ txns, onAction, onOpenPanel }: ReviewQueueProps) {
+  const queue = useMemo(() => txns.filter((t) => t.status === "flagged" || t.status === "review"), [txns]);
+  const [idx, setIdx] = useState(0);
+  const [done, setDone] = useState(0);
   const safeIdx = Math.min(idx, Math.max(0, queue.length - 1));
   const tx = queue[safeIdx];
 
-  function act(action) {
+  function act(action: string) {
     if (!tx) return;
     onAction(action, tx);
     setDone((d) => d + 1);
@@ -196,8 +208,8 @@ function ReviewQueue({ txns, onAction, onOpenPanel }) {
     setIdx((i) => Math.min(i, queue.length - 2 < 0 ? 0 : queue.length - 2));
   }
 
-  useEffectV(() => {
-    function onKey(e) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
       if (!tx) return;
       const k = e.key.toLowerCase();
       if (k === "a") act("clear");
@@ -224,7 +236,7 @@ function ReviewQueue({ txns, onAction, onOpenPanel }) {
   }
 
   const sev = FRAUD.sevOf(tx.score);
-  const sevColor = SEV_STYLE[sev].c;
+  const sevColor = SEV_STYLE[sev]?.c || "var(--low)";
 
   return (
     <div className="content">
@@ -290,13 +302,18 @@ function ReviewQueue({ txns, onAction, onOpenPanel }) {
 }
 
 /* ---------------- DECISION LOG ---------------- */
-const ACTION_META = {
+const ACTION_META: Record<string, {label: string, c: string, icon: string}> = {
   block:          { label: "Blocked",        c: "var(--critical)", icon: "block" },
   clear:          { label: "Approved",       c: "var(--low)",      icon: "check" },
   escalate:       { label: "Escalated",      c: "var(--violet)",   icon: "escalate" },
   false_positive: { label: "False positive", c: "var(--text-2)",   icon: "flag" },
 };
-function DecisionLog({ log }) {
+
+interface DecisionLogProps {
+  log: LogEntry[];
+}
+
+export function DecisionLog({ log }: DecisionLogProps) {
   return (
     <div className="content">
       <div className="page-head flex between">
@@ -312,9 +329,9 @@ function DecisionLog({ log }) {
             <tr><th>Time</th><th>Transaction</th><th>Card</th><th>Action</th><th>Score</th><th>Reviewer</th></tr>
           </thead>
           <tbody>
-            {log.length === 0 && <tr><td colSpan="6"><div className="empty-hint">No decisions logged yet — action a transaction to see it here.</div></td></tr>}
+            {log.length === 0 && <tr><td colSpan={6}><div className="empty-hint">No decisions logged yet — action a transaction to see it here.</div></td></tr>}
             {log.map((e, i) => {
-              const m = ACTION_META[e.action];
+              const m = ACTION_META[e.action] || ACTION_META.false_positive;
               return (
                 <tr key={i} style={{ cursor: "default" }}>
                   <td className="mono" style={{ color: "var(--text-3)", fontSize: 12 }}>{e.time}</td>
@@ -323,7 +340,7 @@ function DecisionLog({ log }) {
                   <td>
                     <span className="sev-tag" style={{ color: m.c }}><Icon name={m.icon} size={14} /> {m.label}</span>
                   </td>
-                  <td><span className="mono" style={{ color: SEV_STYLE[FRAUD.sevOf(e.score)].c, fontWeight: 600 }}>{e.score.toFixed(2)}</span></td>
+                  <td><span className="mono" style={{ color: SEV_STYLE[FRAUD.sevOf(e.score)]?.c || 'var(--low)', fontWeight: 600 }}>{e.score.toFixed(2)}</span></td>
                   <td style={{ color: "var(--text-2)", fontSize: 12.5 }}>{e.by}</td>
                 </tr>
               );
@@ -336,10 +353,14 @@ function DecisionLog({ log }) {
 }
 
 /* ---------------- UPLOAD ---------------- */
-function Upload({ onAnalyze }) {
-  const [drag, setDrag] = useStateV(false);
-  const [running, setRunning] = useStateV(false);
-  const [step, setStep] = useStateV(0);
+interface UploadProps {
+  onAnalyze: () => void;
+}
+
+export function Upload({ onAnalyze }: UploadProps) {
+  const [drag, setDrag] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [step, setStep] = useState(0);
   const STEPS = ["Parsing transactions.csv…", "Building per-card baselines…", "Detecting cross-card signals…", "Scoring & tuning threshold…"];
 
   function run() {
@@ -392,5 +413,3 @@ function Upload({ onAnalyze }) {
     </div>
   );
 }
-
-Object.assign(window, { Dashboard, ReviewQueue, DecisionLog, Upload });

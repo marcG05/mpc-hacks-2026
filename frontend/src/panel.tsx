@@ -1,10 +1,10 @@
-/* ============================================================
-   Fraud Hunter — AI side panel (VS Code-style analyst)
-   ============================================================ */
-const { useState: useStateP, useEffect: useEffectP, useRef: useRefP } = React;
+import { useState, useEffect, useRef } from 'react';
+import { FRAUD } from './data';
+import { Icon, SevTag, Sparkline, sigColorVar, sigBgVar, SEV_STYLE } from './components';
+import type { Transaction } from './types';
 
 /* ---- Build the AI's primary explanation for a transaction ---- */
-function buildExplanation(tx) {
+function buildExplanation(tx: Transaction | null): string {
   if (!tx) return "";
   const top = tx.signals.slice(0, 3).map((s) => s.name.toLowerCase());
   const sev = FRAUD.sevLabel(tx.score).toLowerCase();
@@ -16,20 +16,21 @@ function buildExplanation(tx) {
     `${tx.score >= 0.8 ? "blocking and escalating for manual review" : tx.score >= 0.6 ? "holding the charge pending verification" : "a light-touch step-up authentication"}.`
   );
 }
-function joinList(arr) {
+
+function joinList(arr: string[]): string {
   if (arr.length <= 1) return arr[0] || "";
   return arr.slice(0, -1).join(", ") + " and " + arr[arr.length - 1];
 }
 
 /* ---- Score breakdown rows from signals ---- */
-function breakdownFor(tx) {
+function breakdownFor(tx: Transaction) {
   return tx.signals
     .map((s) => ({ name: s.name, val: s.weight, color: sigColorVar(s.color) }))
     .sort((a, b) => b.val - a.val);
 }
 
 /* ---- Mocked-but-contextual chat answer ---- */
-function mockAnswer(tx, q) {
+function mockAnswer(tx: Transaction, q: string): string {
   const ql = q.toLowerCase();
   const M = FRAUD.money;
   if (/why|flag|reason|score/.test(ql)) {
@@ -66,18 +67,25 @@ const SUGGESTIONS = [
   "How does this compare to the card's history?",
 ];
 
-function AIPanel({ tx, open, onClose, onAction }) {
-  const [explain, setExplain] = useStateP("");
-  const [explaining, setExplaining] = useStateP(false);
-  const [msgs, setMsgs] = useStateP([]);
-  const [input, setInput] = useStateP("");
-  const [thinking, setThinking] = useStateP(false);
-  const bodyRef = useRefP(null);
-  const chatRef = useRefP(null);
+interface AIPanelProps {
+  tx: Transaction | null;
+  open: boolean;
+  onClose: () => void;
+  onAction: (action: string, tx: Transaction) => void;
+}
+
+export function AIPanel({ tx, open, onClose, onAction }: AIPanelProps) {
+  const [explain, setExplain] = useState("");
+  const [explaining, setExplaining] = useState(false);
+  const [msgs, setMsgs] = useState<{role: string, text: string}[]>([]);
+  const [input, setInput] = useState("");
+  const [thinking, setThinking] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
   const txid = tx ? tx.id : null;
 
   // Stream the explanation in when a new tx is opened
-  useEffectP(() => {
+  useEffect(() => {
     if (!tx) return;
     setMsgs([]);
     setInput("");
@@ -91,13 +99,13 @@ function AIPanel({ tx, open, onClose, onAction }) {
       if (i >= full.length) { clearInterval(iv); setExplaining(false); }
     }, 12);
     return () => clearInterval(iv);
-  }, [txid]);
+  }, [txid, tx]);
 
-  useEffectP(() => {
+  useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [msgs, thinking]);
 
-  function ask(q) {
+  function ask(q: string) {
     if (!q.trim() || !tx) return;
     setMsgs((m) => [...m, { role: "me", text: q }]);
     setInput("");
@@ -123,6 +131,8 @@ function AIPanel({ tx, open, onClose, onAction }) {
   if (!tx) return <div className={"ai-panel" + (open ? " show" : "")}></div>;
 
   const brk = breakdownFor(tx);
+  const sevKey = FRAUD.sevOf(tx.score);
+  const sevStyle = SEV_STYLE[sevKey] || SEV_STYLE.low;
 
   return (
     <>
@@ -201,7 +211,7 @@ function AIPanel({ tx, open, onClose, onAction }) {
           <div>
             <div className="sec-label"><Icon name="history" size={13} /> {tx.card} · last 22 txns</div>
             <div className="card" style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 16 }}>
-              <Sparkline data={tx.history} w={260} h={42} color={SEV_STYLE[FRAUD.sevOf(tx.score)].c} />
+              <Sparkline data={tx.history} w={260} h={42} color={sevStyle.c} />
               <div style={{ marginLeft: "auto", textAlign: "right" }}>
                 <div className="aip-meta-k">Median</div>
                 <div className="mono" style={{ fontSize: 14, fontWeight: 600 }}>{FRAUD.money(tx.cardMedian)}</div>
@@ -258,5 +268,3 @@ function AIPanel({ tx, open, onClose, onAction }) {
     </>
   );
 }
-
-window.AIPanel = AIPanel;

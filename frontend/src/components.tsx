@@ -1,15 +1,20 @@
-/* ============================================================
-   Fraud Hunter — shared UI components + icon set
-   Exports to window for cross-script use.
-   ============================================================ */
-const { useState, useEffect, useRef } = React;
+import React from 'react';
+import { FRAUD } from './data';
 
 /* ---------- Icon set (simple line icons) ---------- */
-function Icon({ name, size = 16, stroke = 1.8, className = "", style = {} }) {
+interface IconProps {
+  name: string;
+  size?: number;
+  stroke?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export function Icon({ name, size = 16, stroke = 1.8, className = "", style = {} }: IconProps) {
   const p = { width: size, height: size, viewBox: "0 0 24 24", fill: "none",
-    stroke: "currentColor", strokeWidth: stroke, strokeLinecap: "round",
-    strokeLinejoin: "round", className, style };
-  const paths = {
+    stroke: "currentColor", strokeWidth: stroke, strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const, className, style };
+  const paths: Record<string, React.ReactNode> = {
     shield: <><path d="M12 3l7 3v5c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6l7-3z"/></>,
     grid:   <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
     list:   <><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></>,
@@ -54,15 +59,16 @@ function Icon({ name, size = 16, stroke = 1.8, className = "", style = {} }) {
 }
 
 /* ---------- Severity / status pills ---------- */
-const SEV_STYLE = {
+export const SEV_STYLE: Record<string, { c: string, bg: string, b: string }> = {
   critical: { c: "var(--critical)", bg: "var(--critical-bg)", b: "rgba(240,97,109,0.3)" },
   high:     { c: "var(--high)",     bg: "var(--high-bg)",     b: "rgba(233,138,69,0.3)" },
   medium:   { c: "var(--medium)",   bg: "var(--medium-bg)",   b: "rgba(227,189,78,0.3)" },
   low:      { c: "var(--low)",      bg: "var(--low-bg)",      b: "rgba(56,192,138,0.3)" },
 };
-function SevTag({ score }) {
+
+export function SevTag({ score }: { score: number }) {
   const sev = FRAUD.sevOf(score);
-  const s = SEV_STYLE[sev];
+  const s = SEV_STYLE[sev] || SEV_STYLE.low;
   return (
     <span className="pill" style={{ color: s.c, background: s.bg, borderColor: s.b }}>
       <span className="dot" style={{ background: s.c }}></span>
@@ -71,7 +77,7 @@ function SevTag({ score }) {
   );
 }
 
-const STATUS_STYLE = {
+export const STATUS_STYLE: Record<string, { c: string, bg: string, b: string, label: string }> = {
   flagged:        { c: "var(--critical)", bg: "var(--critical-bg)", b: "rgba(240,97,109,0.3)", label: "Flagged" },
   review:         { c: "var(--accent)",   bg: "var(--accent-soft)", b: "rgba(77,139,240,0.3)", label: "Under Review" },
   blocked:        { c: "var(--high)",     bg: "var(--high-bg)",     b: "rgba(233,138,69,0.3)", label: "Blocked" },
@@ -79,7 +85,8 @@ const STATUS_STYLE = {
   escalated:      { c: "var(--violet)",   bg: "var(--violet-bg)",   b: "rgba(167,139,250,0.3)", label: "Escalated" },
   false_positive: { c: "var(--text-2)",   bg: "rgba(255,255,255,0.06)", b: "var(--border-2)", label: "False Positive" },
 };
-function StatusPill({ status }) {
+
+export function StatusPill({ status }: { status: string }) {
   const s = STATUS_STYLE[status] || STATUS_STYLE.flagged;
   return (
     <span className="pill" style={{ color: s.c, background: s.bg, borderColor: s.b }}>
@@ -89,14 +96,14 @@ function StatusPill({ status }) {
 }
 
 /* ---------- Sparkline ---------- */
-function Sparkline({ data, w = 120, h = 34, color = "var(--accent)" }) {
+export function Sparkline({ data, w = 120, h = 34, color = "var(--accent)" }: { data: number[], w?: number, h?: number, color?: string }) {
   const max = Math.max(...data), min = Math.min(...data);
   const rng = max - min || 1;
-  const step = w / (data.length - 1);
+  const step = w / (Math.max(1, data.length - 1));
   const pts = data.map((v, i) => [i * step, h - ((v - min) / rng) * (h - 4) - 2]);
   const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
   const area = d + ` L ${w} ${h} L 0 ${h} Z`;
-  const last = pts[pts.length - 1];
+  const last = pts[pts.length - 1] || [0, 0];
   const gid = "sg" + Math.random().toString(36).slice(2, 7);
   return (
     <svg width={w} height={h} style={{ display: "block", overflow: "visible" }}>
@@ -114,7 +121,7 @@ function Sparkline({ data, w = 120, h = 34, color = "var(--accent)" }) {
 }
 
 /* ---------- Donut chart ---------- */
-function Donut({ data, size = 150, thickness = 18 }) {
+export function Donut({ data, size = 150, thickness = 18 }: { data: {value: number, color: string}[], size?: number, thickness?: number }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   const r = (size - thickness) / 2;
   const cx = size / 2, cy = size / 2;
@@ -124,7 +131,7 @@ function Donut({ data, size = 150, thickness = 18 }) {
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={thickness} />
       {data.map((d, i) => {
-        const len = (d.value / total) * circ;
+        const len = (d.value / Math.max(1, total)) * circ;
         const seg = (
           <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={d.color}
             strokeWidth={thickness} strokeDasharray={`${len} ${circ - len}`}
@@ -138,7 +145,16 @@ function Donut({ data, size = 150, thickness = 18 }) {
 }
 
 /* ---------- Metric card ---------- */
-function MetricCard({ label, value, icon, delta, deltaDir, sparkColor, sparkPct }) {
+interface MetricCardProps {
+  label: string;
+  value: string | number;
+  icon: string;
+  delta?: string;
+  deltaDir?: 'up' | 'down';
+  sparkColor?: string;
+  sparkPct?: number;
+}
+export function MetricCard({ label, value, icon, delta, deltaDir, sparkColor, sparkPct }: MetricCardProps) {
   return (
     <div className="card metric fade-in">
       <div className="metric-label">
@@ -162,9 +178,9 @@ function MetricCard({ label, value, icon, delta, deltaDir, sparkColor, sparkPct 
 }
 
 /* ---------- Score bar (inline) ---------- */
-function ScoreBar({ score }) {
+export function ScoreBar({ score }: { score: number }) {
   const sev = FRAUD.sevOf(score);
-  const c = SEV_STYLE[sev].c;
+  const c = SEV_STYLE[sev]?.c || "var(--low)";
   return (
     <div className="score-cell">
       <div className="score-bar"><i style={{ width: score * 100 + "%", background: c }}></i></div>
@@ -174,14 +190,9 @@ function ScoreBar({ score }) {
 }
 
 /* ---------- Signal-color → css var ---------- */
-function sigColorVar(color) {
-  return { critical: "var(--critical)", high: "var(--high)", medium: "var(--medium)", low: "var(--low)" }[color] || "var(--accent)";
+export function sigColorVar(color: string) {
+  return ({ critical: "var(--critical)", high: "var(--high)", medium: "var(--medium)", low: "var(--low)" } as Record<string, string>)[color] || "var(--accent)";
 }
-function sigBgVar(color) {
-  return { critical: "var(--critical-bg)", high: "var(--high-bg)", medium: "var(--medium-bg)", low: "var(--low-bg)" }[color] || "var(--accent-soft)";
+export function sigBgVar(color: string) {
+  return ({ critical: "var(--critical-bg)", high: "var(--high-bg)", medium: "var(--medium-bg)", low: "var(--low-bg)" } as Record<string, string>)[color] || "var(--accent-soft)";
 }
-
-Object.assign(window, {
-  Icon, SevTag, StatusPill, Sparkline, Donut, MetricCard, ScoreBar,
-  SEV_STYLE, STATUS_STYLE, sigColorVar, sigBgVar,
-});
