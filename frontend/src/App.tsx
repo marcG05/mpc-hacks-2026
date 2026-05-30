@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FRAUD } from './data';
+
 import { Icon } from './components';
 import { Dashboard, ReviewQueue, DecisionLog, Upload } from './views';
 import { AIPanel } from './features/AIPanel';

@@ -11,7 +11,7 @@ import { EngineService } from './engine.service';
 
 @Controller('engine')
 export class EngineController {
-  constructor(private readonly engine: EngineService) {}
+  constructor(private readonly engine: EngineService) { }
 
   @Get()
   getHello(): string {
@@ -21,13 +21,15 @@ export class EngineController {
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
-    return this.engine.processTransactions(file);
+     const transactions = await this.engine.processTransactions(file);
+    return { transactions };
   }
 
   @Post('analyze')
   @UseInterceptors(FileInterceptor('file'))
   async analyzeFile(@UploadedFile() file: Express.Multer.File) {
-    return this.engine.processTransactions(file);
+    const transactions = await this.engine.processTransactions(file);
+    return { transactions };
   }
 
   @Get('transactions')

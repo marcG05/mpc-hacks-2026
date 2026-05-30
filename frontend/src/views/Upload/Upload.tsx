@@ -1,23 +1,32 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Icon } from '../../components';
 
 interface UploadProps {
-  onAnalyze: () => void;
+  onAnalyze: (file: File) => void;
 }
 
 export function Upload({ onAnalyze }: UploadProps) {
   const [drag, setDrag] = useState(false);
   const [running, setRunning] = useState(false);
   const [step, setStep] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const STEPS = ["Parsing transactions.csv…", "Building per-card baselines…", "Detecting cross-card signals…", "Scoring & tuning threshold…"];
 
-  function run() {
-    setRunning(true); setStep(0);
+  function handleFile(file: File) {
+    if (!file) return;
+    setRunning(true);
+    setStep(0);
+    
+    // Step through the pipeline UI for effect
     let s = 0;
     const iv = setInterval(() => {
       s++; setStep(s);
-      if (s >= STEPS.length) { clearInterval(iv); setTimeout(onAnalyze, 500); }
+      if (s >= STEPS.length) clearInterval(iv);
     }, 650);
+    
+    // Trigger actual analysis immediately with the uploaded file
+    onAnalyze(file);
   }
 
   return (
@@ -25,11 +34,28 @@ export function Upload({ onAnalyze }: UploadProps) {
       <div className="upload-stage">
         {!running ? (
           <div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept=".csv"
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  handleFile(e.target.files[0]);
+                }
+              }}
+            />
             <div className={"dropzone" + (drag ? " drag" : "")}
               onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
               onDragLeave={() => setDrag(false)}
-              onDrop={(e) => { e.preventDefault(); setDrag(false); run(); }}
-              onClick={run}>
+              onDrop={(e) => {
+                e.preventDefault();
+                setDrag(false);
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  handleFile(e.dataTransfer.files[0]);
+                }
+              }}
+              onClick={() => fileInputRef.current?.click()}>
               <div style={{ width: 56, height: 56, margin: "0 auto 18px", borderRadius: 14, background: "var(--accent-soft)", border: "1px solid var(--accent-line)", display: "grid", placeItems: "center" }}>
                 <Icon name="upload" size={26} style={{ color: "var(--accent)" }} />
               </div>
@@ -37,7 +63,9 @@ export function Upload({ onAnalyze }: UploadProps) {
               <div style={{ color: "var(--text-3)", marginTop: 6, fontSize: 13 }}>or click to browse · CSV up to 50 MB</div>
             </div>
             <div style={{ textAlign: "center", marginTop: 18 }}>
-              <button className="btn btn-primary" onClick={run}><Icon name="pulse" size={15} /> Run analysis</button>
+              <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()}>
+                <Icon name="pulse" size={15} /> Select file
+              </button>
             </div>
           </div>
         ) : (
