@@ -53,9 +53,13 @@ def handle_client(client_socket: socket.socket, client_address):
                 return
 
             df = pd.read_csv(io.StringIO(csv_text))
-            result_df = engine.run_pipeline(df)
+            result = engine.run_pipeline(df, return_metrics=True)
+            if isinstance(result, tuple):
+                result_df, metrics = result
+            else:
+                result_df, metrics = result, None
             rows = json.loads(result_df.to_json(orient="records", date_format="iso"))
-            send_response(client_socket, {"ok": True, "rows": rows})
+            send_response(client_socket, {"ok": True, "rows": rows, "metrics": metrics})
         except Exception as e:
             print(f"Exception caught : {e}")
             try:

@@ -47,6 +47,11 @@ export class EngineController {
     return this.engine.getSummary();
   }
 
+  @Get('metrics')
+  getMetrics() {
+    return this.engine.getMetrics();
+  }
+
   @Get('health')
   async getHealth() {
     return this.engine.getHealth();

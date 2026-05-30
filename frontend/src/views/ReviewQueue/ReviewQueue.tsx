@@ -1,20 +1,22 @@
 import { useState, useMemo, useEffect } from 'react';
 import { FRAUD } from '../../data';
 import { Icon, SevTag, Sparkline, sigBgVar, sigColorVar, SEV_STYLE } from '../../components';
-import type { Transaction } from '../../types';
+import type { Transaction, Metrics } from '../../types';
 
 interface ReviewQueueProps {
   txns: Transaction[];
+  metrics: Metrics | null;
   onAction: (action: string, tx: Transaction) => void;
   onOpenPanel: (tx: Transaction) => void;
 }
 
-export function ReviewQueue({ txns, onAction, onOpenPanel }: ReviewQueueProps) {
+export function ReviewQueue({ txns, metrics, onAction, onOpenPanel }: ReviewQueueProps) {
   const queue = useMemo(() => txns.filter((t) => t.status === "flagged" || t.status === "review"), [txns]);
   const [idx, setIdx] = useState(0);
   const [done, setDone] = useState(0);
   const safeIdx = Math.min(idx, Math.max(0, queue.length - 1));
   const tx = queue[safeIdx];
+  const fmt = (value?: number) => (typeof value === "number" ? value.toFixed(2) : "—");
 
   function act(action: string) {
     if (!tx) return;
@@ -59,6 +61,21 @@ export function ReviewQueue({ txns, onAction, onOpenPanel }: ReviewQueueProps) {
       <div className="page-head">
         <h1 className="page-title">Review Queue</h1>
         <div className="page-sub">One transaction at a time · use <span className="kbd">A</span> approve <span className="kbd">D</span> block <span className="kbd">E</span> escalate <span className="kbd">←/→</span> navigate</div>
+      </div>
+      <div className="card" style={{ padding: "10px 14px", marginBottom: 14, display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="aip-meta-k">Model metrics</div>
+        {metrics?.available ? (
+          <>
+            <div className="mono" style={{ fontSize: 13 }}>Precision <b>{fmt(metrics.precision)}</b></div>
+            <div className="mono" style={{ fontSize: 13 }}>Recall <b>{fmt(metrics.recall)}</b></div>
+            <div className="mono" style={{ fontSize: 13 }}>F1 <b>{fmt(metrics.f1)}</b></div>
+            {metrics.support !== undefined && (
+              <div className="mono" style={{ fontSize: 12, color: "var(--text-3)" }}>n={metrics.support}</div>
+            )}
+          </>
+        ) : (
+          <div style={{ fontSize: 12, color: "var(--text-3)" }}>Unavailable (no labels in the uploaded data).</div>
+        )}
       </div>
 
       <div className="rq-stage">

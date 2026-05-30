@@ -37,6 +37,15 @@ export interface LogEntry {
   by: string;
 }
 
+export interface Metrics {
+  available: boolean;
+  precision?: number;
+  recall?: number;
+  f1?: number;
+  support?: number;
+  label_column?: string;
+}
+
 export interface ByTypeData {
   label: string;
   value: number;

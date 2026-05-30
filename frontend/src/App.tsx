@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { Icon } from './components';
 import { Dashboard, ReviewQueue, DecisionLog, Upload } from './views';
 import { AIPanel } from './features/AIPanel';
-import type { Transaction, LogEntry } from './types';
-import { analyzeTransactions, fetchTransactions, fetchDecisions, recordDecision } from './services/api';
+import type { Transaction, LogEntry, Metrics } from './types';
+import { analyzeTransactions, fetchTransactions, fetchDecisions, fetchMetrics, recordDecision } from './services/api';
 import './styles.css';
 
 const NAV = [
@@ -29,6 +29,7 @@ export default function App() {
   const [route, setRoute] = useState('dashboard');
   const [txns, setTxns] = useState<Transaction[]>([]);
   const [log, setLog] = useState<LogEntry[]>([]);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [selected, setSelected] = useState<Transaction | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; icon: string; color: string } | null>(null);
@@ -44,9 +45,14 @@ export default function App() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [transactions, decisions] = await Promise.all([fetchTransactions(), fetchDecisions()]);
+        const [transactions, decisions, metricsPayload] = await Promise.all([
+          fetchTransactions(),
+          fetchDecisions(),
+          fetchMetrics(),
+        ]);
         setTxns(transactions);
         setLog(decisions);
+        setMetrics(metricsPayload);
       } catch (error) {
         console.error('Failed to load backend data:', error);
       }
@@ -114,6 +120,8 @@ export default function App() {
     try {
       const payload = await analyzeTransactions(file);
       setTxns(payload.transactions);
+      const metricsPayload = await fetchMetrics();
+      setMetrics(metricsPayload);
       setRoute('dashboard');
       showToast('Analysis complete', 'check', 'var(--low)');
     } catch (error) {
@@ -191,7 +199,7 @@ export default function App() {
         </header>
 
         {route === 'dashboard' && <Dashboard txns={txns} selectedId={panelOpen ? (selectedLive && selectedLive.id) : null} onSelect={openPanel} />}
-        {route === 'review' && <ReviewQueue txns={txns} onAction={applyAction} onOpenPanel={openPanel} />}
+        {route === 'review' && <ReviewQueue txns={txns} metrics={metrics} onAction={applyAction} onOpenPanel={openPanel} />}
         {route === 'log' && <DecisionLog log={log} />}
         {route === 'upload' && <Upload onAnalyze={handleAnalyze} />}
       </div>

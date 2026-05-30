@@ -5,6 +5,7 @@ import * as net from 'net';
 export class EngineService {
   private transactions: any[] = [];
   private decisions: any[] = [];
+  private metrics: any = { available: false };
 
   getHello(): string {
     return 'Hello World';
@@ -48,6 +49,7 @@ export class EngineService {
             if (resultJson.ok) {
               // Store transactions in memory for retrieval
               this.transactions = resultJson.rows;
+              this.metrics = resultJson.metrics ?? { available: false };
               resolve(resultJson.rows);
             } else {
               reject(new InternalServerErrorException(resultJson.error || 'Engine processing failed'));
@@ -94,6 +96,10 @@ export class EngineService {
       totalDecisions: this.decisions.length,
       atRisk: this.transactions.filter(t => t.status === 'flagged' || t.status === 'review').reduce((sum, t) => sum + (t.amount || 0), 0),
     };
+  }
+
+  getMetrics() {
+    return this.metrics ?? { available: false };
   }
 
   recordDecision(decision: any) {

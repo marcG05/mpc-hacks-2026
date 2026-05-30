@@ -1,4 +1,4 @@
-import type { Transaction, LogEntry } from '../types';
+import type { Transaction, LogEntry, Metrics } from '../types';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -45,6 +45,10 @@ export async function fetchTransactions(): Promise<Transaction[]> {
 
 export async function fetchDecisions(): Promise<LogEntry[]> {
   return request('/decisions');
+}
+
+export async function fetchMetrics(): Promise<Metrics> {
+  return request('/metrics');
 }
 
 export async function recordDecision(payload: { tx: string; card: string; action: string; score: number; by: string }): Promise<LogEntry> {

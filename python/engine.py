@@ -1,3 +1,13 @@
+"""Fraud-detection engine used by the Python backend.
+
+The pipeline:
+1. Loads transaction data from a NumPy array, CSV path, or DataFrame.
+2. Engineers behavioral and merchant-risk features.
+3. Applies weighted business rules.
+4. Runs Isolation Forest anomaly scoring.
+5. Combines both signals into a final fraud verdict.
+"""
+
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
@@ -10,7 +20,16 @@ warnings.filterwarnings("ignore")
 # 1. Load data
 # ─────────────────────────────────────────────────────────────────────────────
 def load_data(source):
-    """Accept ndarray (with header row), CSV path, or DataFrame."""
+    """Normalize raw input into a clean transaction DataFrame.
+
+    Args:
+        source: A NumPy array with a header row, a CSV file path, or an
+            existing pandas DataFrame.
+
+    Returns:
+        A DataFrame with numeric amounts, parsed timestamps, and rows with
+        invalid amount/timestamp values removed.
+    """
     if isinstance(source, np.ndarray):
         df = pd.DataFrame(source[1:], columns=source[0])
     elif isinstance(source, str):
@@ -29,6 +48,11 @@ def load_data(source):
 # 2. Feature engineering (Enriched & Vectorized)
 # ─────────────────────────────────────────────────────────────────────────────
 def engineer_features(df):
+    """Create transaction, card, merchant, and velocity features.
+
+    The engineered features are used by both the rule scorer and the
+    Isolation Forest model.
+    """
     df = df.sort_values(["card_id", "timestamp"]).reset_index(drop=True)
 
     # ── Time features ──
@@ -143,9 +167,10 @@ def engineer_features(df):
 # 3. Rule-based scoring (Layer 2)
 # ─────────────────────────────────────────────────────────────────────────────
 def score_rules(df):
-    """
-    Graduated rule scoring: each rule contributes a weighted score.
-    Returns the DataFrame with individual flags, rule_score, and triggers.
+    """Apply the weighted fraud heuristics and build human-readable triggers.
+
+    Each binary flag contributes a fixed weight to ``rule_score``. The function
+    also assembles a ``triggers`` string that explains why a row was flagged.
     """
     # ── Individual flags (binary) ──
     df["flag_high_amount"] = (df["amount"] > 500).astype(int)
@@ -221,9 +246,10 @@ def score_rules(df):
 # 4. Isolation Forest (Layer 3)
 # ─────────────────────────────────────────────────────────────────────────────
 def score_anomaly(df):
-    """
-    Isolation Forest anomaly scoring on behavioral features.
-    Returns df with if_score (raw), if_anomaly (binary), and if_score_norm (0-1).
+    """Score each transaction with Isolation Forest.
+
+    Returns the raw anomaly score, a binary anomaly prediction, and a 0-1
+    normalized anomaly score where higher values mean more anomalous.
     """
     feature_cols = [
         "amount", "amount_zscore", "hour", "velocity_1h",
@@ -258,9 +284,7 @@ def score_anomaly(df):
 # 5. Ensemble Verdict (Layer 4)
 # ─────────────────────────────────────────────────────────────────────────────
 def ensemble_verdict(df):
-    """
-    Combine rule-based and anomaly scores into a final fraud_score and verdict.
-    """
+    """Blend rule and anomaly scores into a final fraud score and verdict."""
     # Normalize rule_score to 0-1
     max_rule = df["rule_score"].max()
     if max_rule > 0:
@@ -286,9 +310,103 @@ def ensemble_verdict(df):
     return df
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. Plain Text Report
+# 6. Evaluation metrics
+# ─────────────────────────────────────────────────────────────────────────────
+def _normalize_label(value):
+    if pd.isna(value):
+        return None
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    if isinstance(value, (int, np.integer)):
+        if value == 1:
+            return True
+        if value == 0:
+            return False
+    if isinstance(value, (float, np.floating)):
+        if np.isnan(value):
+            return None
+        if value == 1.0:
+            return True
+        if value == 0.0:
+            return False
+    if isinstance(value, str):
+        s = value.strip().lower()
+        if s in {"fraud", "fraudulent", "positive", "pos", "yes", "y", "true", "1"}:
+            return True
+        if s in {"legit", "legitimate", "negative", "neg", "no", "n", "false", "0"}:
+            return False
+    return None
+
+
+def compute_metrics(df, label_column=None, include_suspicious=False):
+    """Compute precision, recall, and F1 when ground-truth labels are available.
+
+    Args:
+        df: DataFrame with fraud_verdict already computed.
+        label_column: Optional label column name to use.
+        include_suspicious: When True, treat SUSPICIOUS as positive.
+
+    Returns:
+        A dict with precision, recall, f1, and support, or None if labels are missing.
+    """
+    candidate_columns = [
+        "label",
+        "fraud_label",
+        "is_fraud",
+        "is_fraudulent",
+        "actual_fraud",
+        "ground_truth",
+        "y_true",
+        "target",
+    ]
+    label_col = label_column if label_column in df.columns else None
+    if label_col is None:
+        for col in candidate_columns:
+            if col in df.columns:
+                label_col = col
+                break
+    if label_col is None or "fraud_verdict" not in df.columns:
+        return None
+
+    positives = ["FRAUD"]
+    if include_suspicious:
+        positives.append("SUSPICIOUS")
+    predicted_positive = df["fraud_verdict"].isin(positives)
+    actual_labels = df[label_col].apply(_normalize_label)
+    valid_mask = actual_labels.notna()
+    if valid_mask.sum() == 0:
+        return None
+
+    actual = actual_labels[valid_mask].astype(bool)
+    pred = predicted_positive[valid_mask].astype(bool)
+
+    tp = int((pred & actual).sum())
+    fp = int((pred & ~actual).sum())
+    fn = int((~pred & actual).sum())
+    tn = int((~pred & ~actual).sum())
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+
+    return {
+        "available": True,
+        "label_column": label_col,
+        "precision": round(float(precision), 4),
+        "recall": round(float(recall), 4),
+        "f1": round(float(f1), 4),
+        "support": int(valid_mask.sum()),
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "tn": tn,
+    }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 7. Plain Text Report
 # ─────────────────────────────────────────────────────────────────────────────
 def print_report(df):
+    """Print a short summary of verdict counts and the top fraud cases."""
     legit = (df["fraud_verdict"] == "LEGITIMATE").sum()
     suspicious = (df["fraud_verdict"] == "SUSPICIOUS").sum()
     fraud = (df["fraud_verdict"] == "FRAUD").sum()
@@ -316,16 +434,20 @@ def print_report(df):
             print()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. Pipeline
+# 8. Pipeline
 # ─────────────────────────────────────────────────────────────────────────────
-def run_pipeline(source):
+def run_pipeline(source, return_metrics=False):
+    """Execute the full fraud pipeline from raw input to final verdicts."""
     df = load_data(source)
     df = engineer_features(df)
     df = score_rules(df)
     df = score_anomaly(df)
     df = ensemble_verdict(df)
+    metrics = compute_metrics(df)
     print_report(df)
 
+    if return_metrics:
+        return df, metrics
     return df
 
 if __name__ == "__main__":
