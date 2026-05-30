@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FRAUD } from './data';
 import { Icon } from './components';
 import { Dashboard, ReviewQueue, DecisionLog, Upload } from './views';
-import { AIPanel } from './panel';
+import { AIPanel } from './features/AIPanel';
 import type { Transaction, LogEntry } from './types';
 import './styles.css';
 

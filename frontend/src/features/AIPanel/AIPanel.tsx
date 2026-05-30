@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { FRAUD } from './data';
-import { Icon, SevTag, Sparkline, sigColorVar, sigBgVar, SEV_STYLE } from './components';
-import type { Transaction } from './types';
+import { FRAUD } from '../../data';
+import { Icon, SevTag, Sparkline, sigColorVar, sigBgVar, SEV_STYLE } from '../../components';
+import type { Transaction } from '../../types';
 
 /* ---- Build the AI's primary explanation for a transaction ---- */
 function buildExplanation(tx: Transaction | null): string {

@@ -1,4 +1,4 @@
-import type { Transaction, LogEntry, ByTypeData } from './types';
+import type { Transaction, LogEntry, ByTypeData } from '../types';
 
 // Signal catalog — each detector signal with weight + icon key
 export const SIGNAL_DEFS: Record<string, any> = {
