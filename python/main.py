@@ -48,6 +48,7 @@ def handle_client(client_socket: socket.socket, client_address):
             print(f"Received {payload_length} bytes")
             csv_text = payload.decode('utf-8')
             if csv_text.strip() == '__ping__':
+                print("Reply to ping")
                 send_response(client_socket, {"ok": True, "rows": []})
                 return
 
@@ -62,6 +63,7 @@ def handle_client(client_socket: socket.socket, client_address):
             except Exception as send_error:
                 print(f"Failed to send error response: {send_error}")
         finally:
+            print("Client closed")
             client_socket.close()
             
                 

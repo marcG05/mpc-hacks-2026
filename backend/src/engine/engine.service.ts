@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import * as net from 'net';
 
 @Injectable()
@@ -12,6 +12,9 @@ export class EngineService {
 
   async processTransactions(file: Express.Multer.File): Promise<any> {
     return new Promise((resolve, reject) => {
+      if(file == null){
+        reject(new BadRequestException("File not found in the request"));
+      }
       const client = new net.Socket();
       
       // Connect to the Python engine server
@@ -59,23 +62,29 @@ export class EngineService {
 
       client.on('error', (err) => {
         console.error("TCP Client error:", err);
-        reject(new InternalServerErrorException('Failed to connect to Python engine'));
+        reject(new InternalServerErrorException('Failed to connect the engine'));
       });
       
       client.on('close', () => {
         // If closed before completing the request, reject if we haven't already resolved
         if (expectedLength === -1 || responseData.length < 4 + expectedLength) {
-            reject(new InternalServerErrorException('TCP Connection closed unexpectedly'));
+            reject(new InternalServerErrorException('Engine Connection closed unexpectedly'));
         }
       });
     });
   }
 
   getTransactions() {
+    if(this.transactions.length < 1){
+      throw new NotFoundException("Transactions not found");
+    }
     return this.transactions;
   }
 
   getDecisions() {
+    if(this.decisions.length < 1){
+      throw new NotFoundException("Decisions not found");
+    }
     return this.decisions;
   }
 
