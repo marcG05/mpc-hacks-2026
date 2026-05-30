@@ -1,13 +1,15 @@
 import socket
 import threading
-import numpy as np
 import engine
 import struct
 import io
+import os
+import json
+import pandas as pd
 
 # Server configuration
-HOST = '0.0.0.0'  # Localhost
-PORT = 3001        # High port number for testing
+HOST = os.environ.get('PY_ENGINE_HOST', '0.0.0.0')
+PORT = int(os.environ.get('PY_ENGINE_PORT', '3001'))
 
 def recv_exact(sock, size):
     data = b''
@@ -24,7 +26,13 @@ def recv_exact(sock, size):
 
 
 
-def handle_client(client_socket:socket.socket, client_address):
+def send_response(sock: socket.socket, payload: dict):
+    body = json.dumps(payload).encode('utf-8')
+    header = struct.pack(">I", len(body))
+    sock.sendall(header + body)
+
+
+def handle_client(client_socket: socket.socket, client_address):
     """Handles communication with a single connected client."""
     print(f"[NEW CONNECTION] {client_address} connected.")
     
@@ -35,18 +43,24 @@ def handle_client(client_socket:socket.socket, client_address):
             payload_length = struct.unpack(">I", header)[0]
 
             # Read payload
-            payload = recv_exact(client_socket, payload_length).decode()
+            payload = recv_exact(client_socket, payload_length)
 
             print(f"Received {payload_length} bytes")
-            array = np.loadtxt(
-                io.StringIO(payload),
-                delimiter=",",
-                skiprows=1,  # if CSV has a header
-            )
-            response = engine.run_pipeline(payload)
-            client_socket.sendall(response.to_json())
+            csv_text = payload.decode('utf-8')
+            if csv_text.strip() == '__ping__':
+                send_response(client_socket, {"ok": True, "rows": []})
+                return
+
+            df = pd.read_csv(io.StringIO(csv_text))
+            result_df = engine.run_pipeline(df)
+            rows = json.loads(result_df.to_json(orient="records", date_format="iso"))
+            send_response(client_socket, {"ok": True, "rows": rows})
         except Exception as e:
             print(f"Exception caught : {e}")
+            try:
+                send_response(client_socket, {"ok": False, "error": str(e)})
+            except Exception as send_error:
+                print(f"Failed to send error response: {send_error}")
         finally:
             client_socket.close()
             

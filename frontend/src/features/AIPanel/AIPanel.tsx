@@ -12,7 +12,7 @@ function buildExplanation(tx: Transaction | null): string {
     `${tx.id} scored ${tx.score.toFixed(2)} — ${sev} risk. ` +
     `The strongest drivers are ${joinList(top)}. ` +
     `${tx.signals[0].detail} ` +
-    `Given the ${FRAUD.FRAUD_TYPES[tx.type].toLowerCase()} pattern on ${tx.card}, I'd recommend ` +
+    `Given the ${((FRAUD.FRAUD_TYPES[tx.type] ?? tx.type) || 'unknown').toLowerCase()} pattern on ${tx.card}, I'd recommend ` +
     `${tx.score >= 0.8 ? "blocking and escalating for manual review" : tx.score >= 0.6 ? "holding the charge pending verification" : "a light-touch step-up authentication"}.`
   );
 }
