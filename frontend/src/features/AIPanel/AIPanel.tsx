@@ -8,10 +8,14 @@ function buildExplanation(tx: Transaction | null): string {
   if (!tx) return "";
   const top = tx.signals.slice(0, 3).map((s) => s.name.toLowerCase());
   const sev = FRAUD.sevLabel(tx.score).toLowerCase();
+  
+  const drivers = top.length > 0 ? `The strongest drivers are ${joinList(top)}. ` : "";
+  const detail = tx.signals.length > 0 ? `${tx.signals[0].detail} ` : "No explicit risk signals were triggered. ";
+
   return (
     `${tx.id} scored ${tx.score.toFixed(2)} — ${sev} risk. ` +
-    `The strongest drivers are ${joinList(top)}. ` +
-    `${tx.signals[0].detail} ` +
+    drivers +
+    detail +
     `Given the ${((FRAUD.FRAUD_TYPES[tx.type] ?? tx.type) || 'unknown').toLowerCase()} pattern on ${tx.card}, I'd recommend ` +
     `${tx.score >= 0.8 ? "blocking and escalating for manual review" : tx.score >= 0.6 ? "holding the charge pending verification" : "a light-touch step-up authentication"}.`
   );
@@ -46,7 +50,9 @@ function mockAnswer(tx: Transaction, q: string): string {
     const dev = tx.signals.find((s) => /device|ip/.test(s.key));
     return dev
       ? `Yes — ${dev.detail} This kind of fan-out across multiple cards is a strong device-farm / account-takeover indicator. I'd check the other cards on ${tx.ip} before clearing anything.`
-      : `No shared-device or shared-IP signal fired on ${tx.id}. The risk here is driven by ${tx.signals[0].name.toLowerCase()} rather than infrastructure reuse.`;
+      : (tx.signals.length > 0 
+          ? `No shared-device or shared-IP signal fired on ${tx.id}. The risk here is driven by ${tx.signals[0].name.toLowerCase()} rather than infrastructure reuse.` 
+          : `No shared-device or shared-IP signal fired on ${tx.id}. No explicit risk drivers identified.`);
   }
   if (/recommend|action|should|do|block|approve/.test(ql)) {
     const rec = tx.score >= 0.8 ? "Block + escalate" : tx.score >= 0.6 ? "Hold for verification" : "Step-up auth";
@@ -57,7 +63,8 @@ function mockAnswer(tx: Transaction, q: string): string {
   }
   // fallback
   return `Looking at ${tx.id}: it's a ${M(tx.amount)} ${tx.channel.toLowerCase()} charge at ${tx.merchant}, scored ${tx.score.toFixed(2)} (${FRAUD.sevLabel(tx.score)}). ` +
-    `The dominant signal is ${tx.signals[0].name.toLowerCase()} — ${tx.signals[0].detail} Ask me about the card's history, shared devices, or what action to take.`;
+    (tx.signals.length > 0 ? `The dominant signal is ${tx.signals[0].name.toLowerCase()} — ${tx.signals[0].detail} ` : "") +
+    `Ask me about the card's history, shared devices, or what action to take.`;
 }
 
 const SUGGESTIONS = [
