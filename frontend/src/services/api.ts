@@ -14,9 +14,28 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json();
 }
 
-export async function analyzeTransactions(file: File): Promise<{ transactions: Transaction[] }> {
+async function resolveCsvFile(input: File | string): Promise<File> {
+  if (input instanceof File) {
+    return input;
+  }
+
+  const response = await fetch(input);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`CSV fetch failed (${response.status}): ${text}`);
+  }
+
+  const blob = await response.blob();
+  const name = input.split('/').pop() || 'import.csv';
+  return new File([blob], name, { type: blob.type || 'text/csv' });
+}
+
+export async function analyzeTransactions(
+  file: File | string,
+): Promise<{ transactions: Transaction[] }> {
   const form = new FormData();
-  form.append('file', file);
+  const csvFile = await resolveCsvFile(file);
+  form.append('file', csvFile, csvFile.name);
   return request('/analyze', { method: 'POST', body: form });
 }
 
