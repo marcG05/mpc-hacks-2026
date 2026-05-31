@@ -74,7 +74,7 @@ export function TransactionDrawer({ tx, onClose, onAction, currentUser }: Transa
     try {
       const res = await fetchChatResponse({ tx, history: msgs, message: q });
       setThinking(false);
-      setMsgs(prev => [...prev, { role: 'ai', text: res?.response || 'No response from Copilot.' }]);
+      setMsgs(prev => [...prev, { role: 'ai', text: res?.response || 'No response from Gemini.' }]);
     } catch (e: any) {
       setThinking(false);
       setMsgs(prev => [...prev, { role: 'ai', text: `Error: ${e.message}` }]);
@@ -96,7 +96,7 @@ export function TransactionDrawer({ tx, onClose, onAction, currentUser }: Transa
     { key: 'overview', icon: 'info', label: 'Overview' },
     { key: 'flags',    icon: 'bolt', label: 'Signals' },
     { key: 'geo',      icon: 'globe', label: 'Geo' },
-    { key: 'chat',     icon: 'sparkle', label: 'Copilot' },
+    { key: 'chat',     icon: 'sparkle', label: 'Gemini' },
   ];
 
   return (
@@ -448,7 +448,7 @@ export function TransactionDrawer({ tx, onClose, onAction, currentUser }: Transa
                       <input
                         value={input}
                         onChange={e => setInput(e.target.value)}
-                        placeholder={`Ask Copilot about ${tx.id}…`}
+                        placeholder={`Ask Gemini about ${tx.id}…`}
                         style={{ flex: 1, background: 'transparent', border: 0, outline: 'none', color: 'var(--text)', fontSize: 13 }}
                       />
                       <button

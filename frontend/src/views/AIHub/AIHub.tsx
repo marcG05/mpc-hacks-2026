@@ -411,10 +411,12 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
     printWindow.document.close();
   };
 
-  // Keyboard Shortcuts (Alt + Shift + A/B/E)
+  // Keyboard Shortcuts (Ctrl + Shift + key)
+  // A = Approve/Clear, B = Block, E = Escalate, F = FP Flag
+  // N = Next in queue, P = Previous in queue
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey && e.shiftKey) {
+      if (e.ctrlKey && e.shiftKey && !e.altKey) {
         const key = e.key.toUpperCase();
         if (key === 'A') {
           e.preventDefault();
@@ -431,6 +433,27 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
           if (activeTx) {
             setIsEscalationFormOpen(true);
           }
+        } else if (key === 'F') {
+          e.preventDefault();
+          if (activeTx) {
+            handleAction("false_positive", activeTx);
+          }
+        } else if (key === 'N') {
+          e.preventDefault();
+          // Navigate to next transaction in queue
+          if (activeTx && triageQueue.length > 0) {
+            const currentIdx = triageQueue.findIndex(t => t.id === activeTx.id);
+            const nextIdx = currentIdx < triageQueue.length - 1 ? currentIdx + 1 : 0;
+            setSelectedTx(triageQueue[nextIdx]);
+          }
+        } else if (key === 'P') {
+          e.preventDefault();
+          // Navigate to previous transaction in queue
+          if (activeTx && triageQueue.length > 0) {
+            const currentIdx = triageQueue.findIndex(t => t.id === activeTx.id);
+            const prevIdx = currentIdx > 0 ? currentIdx - 1 : triageQueue.length - 1;
+            setSelectedTx(triageQueue[prevIdx]);
+          }
         }
       }
     };
@@ -439,7 +462,7 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [activeTx, handleAction]);
+  }, [activeTx, handleAction, triageQueue]);
 
   // Initialize/Reset chat when transaction changes
   useEffect(() => {
@@ -512,7 +535,7 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
           setActiveTab('amount');
         }
       } else {
-        setMsgs(prev => [...prev, { role: 'ai', text: 'Error: Empty response from Copilot.' }]);
+        setMsgs(prev => [...prev, { role: 'ai', text: 'Error: Empty response from Gemini.' }]);
       }
     } catch (e: any) {
       console.error('Gemini chat failed:', e);
@@ -563,11 +586,11 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                   {expandedSignalKey === s.key && (
                     <div style={{ 
                       padding: '8px 10px', 
-                      background: 'var(--surface-hi)', 
+                      background: 'var(--surface-2)', 
                       borderRadius: 'var(--radius-sm)', 
                       fontSize: 11.5, 
                       color: 'var(--text-2)',
-                      borderTop: '1px solid var(--border)',
+                      border: '1px solid var(--border)',
                       lineHeight: 1.45,
                       marginTop: 4,
                       animation: 'fadeIn 0.2s ease'
@@ -710,50 +733,127 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
         );
       }
 
-      case 'device':
+      case 'device': {
+        const deviceId = activeTx.device || 'dev_unknown';
+        const ipAddress = activeTx.ip || '0.0.0.0';
+
+        // Derive deterministic per-transaction related cards from device/ip hash
+        const devSeed = (activeTx.device || activeTx.id).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        const ipSeed = (activeTx.ip || activeTx.id).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        const cardCount = 2 + (devSeed % 4); // 2-5 cards
+        const isVpn = ipSeed % 3 === 0;
+        const isTor = ipSeed % 5 === 0 && !isVpn;
+
+        // Generate related cards from the same device
+        const relatedCards = Array.from({ length: Math.min(cardCount, 4) }, (_, i) => {
+          const cardHash = ((devSeed * (i + 7)) % 99999999).toString().padStart(8, '0');
+          const vol = Math.round(((devSeed * (i + 3)) % 900) + 10);
+          const statuses = ['Blocked', 'Review', 'Cleared'] as const;
+          const statusIdx = (devSeed + i) % 3;
+          const status = statuses[statusIdx];
+          return {
+            id: `card_${cardHash}`,
+            vol,
+            status,
+            color: status === 'Blocked' ? 'var(--critical)' : status === 'Review' ? 'var(--medium)' : 'var(--text-3)',
+            bg: status === 'Blocked' ? 'var(--critical-bg)' : status === 'Review' ? 'var(--medium-bg)' : 'var(--surface-3)'
+          };
+        });
+
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div className="sec-label" style={{ margin: 0 }}><Icon name="device" size={13} /> Infrastructure & Network</div>
-            
-            <div style={{ background: 'var(--surface-hi)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 12 }}>
-              <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.05em' }}>
-                Shared Device Fingerprint (last 24h)
+            {/* Section Label with Line */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 2px' }}>
+              <Icon name="layers" size={13} style={{ color: 'var(--text-3)' }} />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Infrastructure & Network
+              </span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+            </div>
+
+            {/* Outlined White Card for Device Fingerprint */}
+            <div style={{ background: '#FFFFFF', border: '1px solid var(--border)', borderRadius: '8px', padding: 14 }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Shared Device Fingerprint (Last 24h)
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ padding: 8, background: 'var(--surface)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--critical)' }}>
-                  <div className="flex between">
-                    <span className="mono" style={{ fontSize: 11.5, fontWeight: 600 }}>{activeTx.device || 'dev_9f42x'}</span>
-                    <span className="mono" style={{ fontSize: 11, color: 'var(--critical)' }}>Used by 3 cards</span>
-                  </div>
+                {/* Row 1: Device ID */}
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  padding: '10px 12px', 
+                  background: '#FAF7F2', 
+                  borderRadius: '6px', 
+                  borderLeft: `4px solid ${cardCount > 2 ? 'var(--critical)' : 'var(--medium)'}` 
+                }}>
+                  <span className="mono" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>
+                    {deviceId}
+                  </span>
+                  <span style={{ fontSize: '11px', color: cardCount > 2 ? 'var(--critical)' : 'var(--medium)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
+                    ▲ Used by {cardCount} cards
+                  </span>
                 </div>
-                <div style={{ padding: 8, background: 'var(--surface)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--medium)' }}>
-                  <div className="flex between">
-                    <span className="mono" style={{ fontSize: 11.5, fontWeight: 600 }}>{activeTx.ip || '184.22.91.4'}</span>
-                    <span className="mono" style={{ fontSize: 11, color: 'var(--medium)' }}>VPN / Proxy proxy</span>
-                  </div>
+                {/* Row 2: IP Address */}
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  padding: '10px 12px', 
+                  background: '#FAF7F2', 
+                  borderRadius: '6px', 
+                  borderLeft: `4px solid ${isVpn || isTor ? 'var(--critical)' : 'var(--medium)'}` 
+                }}>
+                  <span className="mono" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>
+                    {ipAddress}
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-2)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Icon name="globe" size={11} style={{ color: 'var(--text-3)' }} />
+                    {isVpn ? 'VPN / Proxy Detected' : isTor ? 'Tor Exit Node' : 'Residential ISP'}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12.5 }}>
-              <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-2)' }}>Other cards on this IP:</div>
-              <div style={{ maxHeight: 120, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div className="flex between" style={{ background: 'rgba(255,255,255,0.01)', padding: '5px 8px', borderRadius: 4 }}>
-                  <span className="mono" style={{ fontSize: 11.5 }}>card_83912903</span>
-                  <span className="mono" style={{ fontSize: 11.5, color: 'var(--critical)' }}>$840 (Blocked)</span>
-                </div>
-                <div className="flex between" style={{ background: 'rgba(255,255,255,0.01)', padding: '5px 8px', borderRadius: 4 }}>
-                  <span className="mono" style={{ fontSize: 11.5 }}>card_48291041</span>
-                  <span className="mono" style={{ fontSize: 11.5, color: 'var(--medium)' }}>$220 (Review)</span>
-                </div>
-                <div className="flex between" style={{ background: 'rgba(255,255,255,0.01)', padding: '5px 8px', borderRadius: 4 }}>
-                  <span className="mono" style={{ fontSize: 11.5 }}>card_28103940</span>
-                  <span className="mono" style={{ fontSize: 11.5, color: 'var(--low)' }}>$12 (Cleared)</span>
-                </div>
+            {/* Other cards on this IP */}
+            <div style={{ marginTop: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-2)', marginBottom: 6 }}>
+                Other cards on this IP ({relatedCards.length}):
               </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+                <thead>
+                  <tr style={{ background: '#F4EFE6', borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Card ID</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Volume</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {relatedCards.map((row, i) => (
+                    <tr key={i} style={{ borderBottom: i < relatedCards.length - 1 ? '1px solid var(--border)' : 'none', background: '#FFFFFF' }}>
+                      <td className="mono" style={{ padding: '10px 12px', fontSize: '12px', fontWeight: 500, color: 'var(--text)' }}>{row.id}</td>
+                      <td className="mono" style={{ padding: '10px 12px', fontSize: '12px', fontWeight: 700, color: row.color }}>${row.vol}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '2px 8px',
+                          borderRadius: '99px',
+                          background: row.bg,
+                          color: row.color,
+                          fontSize: '11px',
+                          fontWeight: 700
+                        }}>
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         );
+      }
 
       case 'card':
         return (
@@ -763,26 +863,66 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
           </div>
         );
 
-      case 'amount':
+      case 'amount': {
+        // Derive rule/model split from the transaction's signals
+        const totalSignalWeight = activeTx.signals.reduce((sum, s) => sum + s.weight, 0);
+        const rulesPct = activeTx.signals.length > 0 
+          ? Math.round(Math.min(85, Math.max(25, (totalSignalWeight / (totalSignalWeight + 1.5)) * 100)))
+          : 50;
+        const modelPct = 100 - rulesPct;
+        const amountRatio = activeTx.cardMedian > 0 ? (activeTx.amount / activeTx.cardMedian) : 1;
+        const deviationLabel = amountRatio > 3 ? 'Extreme Outlier' : amountRatio > 1.8 ? 'High Deviation' : amountRatio > 1.2 ? 'Moderate Deviation' : 'Within Range';
+
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div className="sec-label" style={{ margin: 0 }}><Icon name="trend" size={13} /> Risk Score Contribution</div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Amount vs Median comparison */}
+              <div style={{ padding: 10, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                <div className="flex between" style={{ fontSize: 12, marginBottom: 6 }}>
+                  <span>Amount vs Card Median</span>
+                  <span className="mono" style={{ fontWeight: 600, color: amountRatio > 2 ? 'var(--critical)' : 'var(--text)' }}>
+                    ${activeTx.amount.toFixed(2)} / ${activeTx.cardMedian.toFixed(2)} ({amountRatio.toFixed(1)}x)
+                  </span>
+                </div>
+                <div style={{ fontSize: 10.5, color: amountRatio > 2 ? 'var(--critical)' : 'var(--medium)', fontWeight: 600 }}>
+                  {deviationLabel}
+                </div>
+              </div>
+
               <div style={{ padding: 10, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
                 <div className="flex between" style={{ fontSize: 12, marginBottom: 6 }}>
                   <span>Engine Split Ensemble</span>
-                  <span className="mono" style={{ fontWeight: 600 }}>60% Rules / 40% Isolation Forest</span>
+                  <span className="mono" style={{ fontWeight: 600 }}>{rulesPct}% Rules / {modelPct}% Isolation Forest</span>
                 </div>
                 <div style={{ height: 8, background: 'var(--border)', borderRadius: 99, overflow: 'hidden', display: 'flex' }}>
-                  <i style={{ width: '60%', background: 'var(--accent)' }} title="Rules"></i>
-                  <i style={{ width: '40%', background: 'var(--violet)' }} title="Anomaly Model"></i>
+                  <i style={{ width: `${rulesPct}%`, background: 'var(--accent)' }} title="Rules"></i>
+                  <i style={{ width: `${modelPct}%`, background: 'var(--violet)' }} title="Anomaly Model"></i>
+                </div>
+              </div>
+
+              <div style={{ padding: 10, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                <div className="flex between" style={{ fontSize: 12, marginBottom: 6 }}>
+                  <span>Composite Risk Score</span>
+                  <span className="mono" style={{ fontWeight: 700, color: activeTx.score >= 0.8 ? 'var(--critical)' : activeTx.score >= 0.6 ? 'var(--high)' : 'var(--medium)' }}>
+                    {(activeTx.score * 100).toFixed(0)}%
+                  </span>
+                </div>
+                <div style={{ height: 8, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                  <div style={{ 
+                    width: `${activeTx.score * 100}%`, 
+                    height: '100%',
+                    background: activeTx.score >= 0.8 ? 'var(--critical)' : activeTx.score >= 0.6 ? 'var(--high)' : 'var(--medium)',
+                    borderRadius: 99,
+                    transition: 'width 0.3s ease'
+                  }} />
                 </div>
               </div>
 
               <div style={{ marginTop: 8 }}>
                 <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.05em' }}>
-                  Signal Influence Weight
+                  Signal Influence Weight ({activeTx.signals.length} signals)
                 </div>
                 {activeTx.signals.map((s, i) => (
                   <div className="brk-row" key={i} style={{ marginBottom: 10 }}>
@@ -791,45 +931,81 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                     <div className="brk-val">{s.weight.toFixed(1)}</div>
                   </div>
                 ))}
+                {activeTx.signals.length === 0 && (
+                  <div style={{ padding: 12, textAlign: 'center', color: 'var(--text-3)', fontSize: 11.5 }}>
+                    No explicit rule signals. Score derived from anomaly model.
+                  </div>
+                )}
               </div>
             </div>
           </div>
         );
+      }
 
-      case 'time':
+      case 'time': {
+        // Derive velocity data deterministically from transaction fields
+        const timeSeed = activeTx.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        const vel15 = 1 + (timeSeed % 5); // 1-5 transactions in 15 min
+        const vel1h = vel15 + 1 + (timeSeed % 7); // always more than 15-min
+        const hasVelocitySignal = activeTx.signals.some(s => s.name.toLowerCase().includes('velocity'));
+        
+        // Parse hour from time string for overnight analysis
+        const timeStr = activeTx.time || '00:00';
+        const hourMatch = timeStr.match(/(\d{1,2})/);
+        const hour = hourMatch ? parseInt(hourMatch[1]) : 0;
+        const isOvernight = hour >= 23 || hour < 6;
+        const sleepProb = isOvernight ? (85 + (timeSeed % 13)) : (10 + (timeSeed % 30));
+        const windowLabel = isOvernight ? 'Overnight window' : hour < 12 ? 'Morning window' : hour < 17 ? 'Afternoon window' : 'Evening window';
+        
+        const categoryBurst = activeTx.category || 'General';
+        const burstLevel = hasVelocitySignal ? 'Suspicious burst' : vel15 >= 3 ? 'Elevated activity' : 'Normal activity';
+
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div className="sec-label" style={{ margin: 0 }}><Icon name="clock" size={13} /> Velocity & Timestamp Analysis</div>
             
-            <div style={{ background: 'var(--surface-hi)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 12 }}>
+            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 12 }}>
               <div className="flex between" style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="clock" size={15} style={{ color: 'var(--accent)' }} />
-                  <span style={{ fontSize: 12.5, fontWeight: 600 }}>Overnight window</span>
+                  <Icon name="clock" size={15} style={{ color: isOvernight ? 'var(--critical)' : 'var(--accent)' }} />
+                  <span style={{ fontSize: 12.5, fontWeight: 600 }}>{windowLabel}</span>
                 </div>
-                <span className="mono" style={{ fontSize: 12, color: 'var(--medium)' }}>{activeTx.time}</span>
+                <span className="mono" style={{ fontSize: 12, color: isOvernight ? 'var(--critical)' : 'var(--medium)' }}>{activeTx.time}</span>
               </div>
               <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.45 }}>
-                This charge was processed at local time **{activeTx.time}**. Based on history for this card, the owner has a 97% probability of sleeping during this hour.
+                This charge was processed at local time <strong>{activeTx.time}</strong>.{' '}
+                {isOvernight 
+                  ? `Based on history for card ${activeTx.card}, the owner has a ${sleepProb}% probability of sleeping during this hour.`
+                  : `Transaction occurred during standard activity hours for card ${activeTx.card}. Sleep probability: ${sleepProb}%.`
+                }
               </p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5, marginTop: 4 }}>
               <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-3)' }}>15-Min Velocity</span>
-                <span className="mono" style={{ fontWeight: 600, color: 'var(--critical)' }}>3 transactions</span>
+                <span className="mono" style={{ fontWeight: 600, color: vel15 >= 3 ? 'var(--critical)' : 'var(--text)' }}>{vel15} transaction{vel15 !== 1 ? 's' : ''}</span>
               </div>
               <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-3)' }}>1-Hour Velocity</span>
-                <span className="mono" style={{ fontWeight: 600, color: 'var(--critical)' }}>6 transactions</span>
+                <span className="mono" style={{ fontWeight: 600, color: vel1h >= 5 ? 'var(--critical)' : 'var(--text)' }}>{vel1h} transactions</span>
               </div>
               <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-3)' }}>Merchant Category Velocity</span>
-                <span className="mono" style={{ fontWeight: 600 }}>Suspicious burst (Electronics)</span>
+                <span className="mono" style={{ fontWeight: 600, color: burstLevel === 'Suspicious burst' ? 'var(--critical)' : 'var(--text)' }}>{burstLevel} ({categoryBurst})</span>
+              </div>
+              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ color: 'var(--text-3)' }}>Channel</span>
+                <span className="mono" style={{ fontWeight: 600 }}>{activeTx.channel}</span>
+              </div>
+              <div className="flex between" style={{ padding: '6px 0' }}>
+                <span style={{ color: 'var(--text-3)' }}>Transaction Country</span>
+                <span className="mono" style={{ fontWeight: 600 }}>{activeTx.country} → {activeTx.merchantCountry}</span>
               </div>
             </div>
           </div>
         );
+      }
 
       default:
         return null;
@@ -886,33 +1062,61 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
       {activeTx ? (
         <div style={{ height: '100%', overflowY: 'auto', borderLeft: '1px solid var(--border)', paddingLeft: 12, display: 'grid', gridTemplateRows: 'auto 1fr', gap: 14 }}>
           {/* Quick tab filters at top */}
-          <div style={{ padding: '12px 0 6px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Dynamic Panel</span>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {(['signals', 'location', 'device', 'card', 'time'] as TabKey[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  style={{
-                    background: 'transparent',
-                    border: 0,
-                    cursor: 'pointer',
-                    color: activeTab === tab ? 'var(--accent)' : 'var(--text-3)',
-                    padding: '2px 4px'
-                  }}
-                  title={`Switch to ${tab}`}
-                >
-                  <Icon 
-                    name={
-                      tab === 'signals' ? 'pulse' :
-                      tab === 'location' ? 'globe' :
-                      tab === 'device' ? 'device' :
-                      tab === 'card' ? 'history' : 'clock'
-                    } 
-                    size={14} 
-                  />
-                </button>
-              ))}
+          <div style={{ padding: '12px 0 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: 10 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#7C7569', textTransform: 'uppercase', letterSpacing: '.06em' }}>Dynamic Panel</span>
+            <div
+              style={{
+                display: 'flex',
+                background: '#F4EFE6',
+                border: '1px solid #E6DFD3',
+                borderRadius: '99px',
+                padding: '3px',
+                gap: '2px',
+              }}
+            >
+              {(['signals', 'location', 'device', 'card', 'time'] as TabKey[]).map((tab) => {
+                const isActive = activeTab === tab;
+                const activeColor = tab === 'device' ? 'var(--violet)' : 'var(--primary)';
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    style={{
+                      border: 'none',
+                      cursor: 'pointer',
+                      borderRadius: '99px',
+                      padding: '5px 12px',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      fontFamily: 'var(--sans)',
+                      background: isActive ? '#FFFFFF' : 'transparent',
+                      color: isActive ? activeColor : 'var(--text-3)',
+                      boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      transition: 'all .11s',
+                    }}
+                    title={`Switch to ${tab}`}
+                  >
+                    <Icon 
+                      name={
+                        tab === 'signals' ? 'pulse' :
+                        tab === 'location' ? 'globe' :
+                        tab === 'device' ? 'device' :
+                        tab === 'card' ? 'history' : 'clock'
+                      } 
+                      size={11} 
+                    />
+                    <span style={{ textTransform: 'capitalize' }}>
+                      {tab === 'signals' ? 'Signals' :
+                       tab === 'location' ? 'Map' :
+                       tab === 'device' ? 'Device' :
+                       tab === 'card' ? 'History' : 'Time'}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

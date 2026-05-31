@@ -22,7 +22,7 @@ import './styles.css';
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: 'grid' },
   { key: 'transactions', label: 'Transaction Log', icon: 'list' },
-  { key: 'hub', label: 'Investigation Hub', icon: 'sparkle' },
+  { key: 'hub', label: 'Investigation Hub', icon: 'search' },
 ];
 
 function nowTime() {
@@ -198,79 +198,103 @@ export default function App() {
   return (
     <div className={'app' + (collapsed ? ' collapsed' : '')}>
       <aside className={'sidebar' + (collapsed ? ' collapsed' : '')}>
-        <div className="brand" onClick={toggleCollapsed} style={{ cursor: 'pointer' }} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
-          <div className="brand-mark"><Icon name="shield" size={18} style={{ color: '#fff' }} /></div>
+
+        {/* Brand mark — click to collapse */}
+        <div className="brand" onClick={toggleCollapsed} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <div className="brand-mark">
+            <Icon name="shield" size={16} style={{ color: '#fff' }} />
+          </div>
           <div className="brand-text">
-            <div className="brand-name" style={{ letterSpacing: '-0.02em' }}>Falcon</div>
+            <div className="brand-name">Falcon</div>
             <div className="brand-sub">Risk Operations</div>
           </div>
         </div>
-        
+
+        {/* Primary nav */}
         <div className="nav-group-label">Monitoring</div>
         {NAV.slice(0, 3).map((n) => (
-          <div 
-            key={n.key} 
-            title={collapsed ? n.label : undefined} 
-            className={'nav-item' + (route === n.key ? ' active' : '')} 
+          <div
+            key={n.key}
+            title={collapsed ? n.label : undefined}
+            className={'nav-item' + (route === n.key ? ' active' : '')}
             onClick={() => handleNavigate(n.key)}
           >
-            <Icon name={n.icon} size={17} />
+            <Icon name={n.icon} size={16} />
             <span>{n.label}</span>
-            {n.key === 'hub' && openQueue > 0 && <span className="count">{openQueue}</span>}
+            {n.key === 'hub' && openQueue > 0 && (
+              <span className="count">{openQueue}</span>
+            )}
           </div>
         ))}
-        
-        {/* Logout action */}
-        <div 
-          className="nav-item" 
-          onClick={handleLogout}
-          style={{ marginTop: 'auto', color: 'var(--critical)', cursor: 'pointer' }}
-          title={collapsed ? "Logout" : undefined}
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        <div className="nav-group-label">Account</div>
+
+        {/* Notifications */}
+        <div
+          className="nav-item"
+          onClick={() => handleNavigate('hub')}
+          title={collapsed ? `Alerts (${openQueue})` : undefined}
         >
-          <Icon name="block" size={17} style={{ color: 'var(--critical)' }} />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Icon name="bell" size={16} />
+            {openQueue > 0 && (
+              <span className="notif-dot">{openQueue}</span>
+            )}
+          </div>
+          <span>Alerts</span>
+          {openQueue > 0 && !collapsed && (
+            <span className="count">{openQueue}</span>
+          )}
+        </div>
+
+        {/* User profile */}
+        <div
+          className="nav-item"
+          title={collapsed ? currentUser.username : undefined}
+        >
+          <div className="avatar">
+            {currentUser.username.substring(0, 2).toUpperCase()}
+          </div>
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {currentUser.username}
+          </span>
+        </div>
+
+        {/* Logout */}
+        <div
+          className="nav-item"
+          onClick={handleLogout}
+          title={collapsed ? 'Logout' : undefined}
+          style={{ marginBottom: 4 }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--critical)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = ''; }}
+        >
+          <Icon name="block" size={16} />
           <span>Logout</span>
         </div>
 
-        {/* Notifications */}
-        <div 
-          className="nav-item" 
-          onClick={() => handleNavigate('hub')}
-          style={{ cursor: 'pointer' }}
-          title={collapsed ? `Notifications (${openQueue})` : undefined}
-        >
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Icon name="bell" size={17} />
-            {openQueue > 0 && <span className="notif-dot" style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, fontSize: 8, border: '1px solid var(--surface-2)' }}>{openQueue}</span>}
-          </div>
-          <span>Notifications</span>
-          {openQueue > 0 && !collapsed && <span className="count">{openQueue}</span>}
-        </div>
-
-        {/* User profile details */}
-        <div 
-          className="nav-item" 
-          style={{ cursor: 'pointer' }} 
-          title={collapsed ? currentUser.username : undefined}
-        >
-          <div className="avatar" style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(150deg, #5b8def, #8a6cf0)', display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 700, color: '#fff', marginRight: 0 }}>
-            {currentUser.username.substring(0, 2).toUpperCase()}
-          </div>
-          <span>Profile ({currentUser.username})</span>
-        </div>
-
-        {/* Engine online healthcard */}
-        <div className="engine-card" style={{ marginTop: 8 }}>
-          <div className="card" style={{ padding: 13, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-            <div className="flex" style={{ alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span className="dot" style={{ width: 7, height: 7, borderRadius: 99, background: engineStatus === 'online' ? 'var(--low)' : engineStatus === 'checking' ? 'var(--accent)' : 'var(--critical)', boxShadow: `0 0 8px ${engineStatus === 'online' ? 'var(--low)' : engineStatus === 'checking' ? 'var(--accent)' : 'var(--critical)'}` }}></span>
-              <span style={{ fontSize: 12, fontWeight: 600 }}>{engineStatus === 'online' ? 'Engine online' : engineStatus === 'checking' ? 'Checking engine...' : 'Engine offline'}</span>
+        {/* Engine health card */}
+        <div className="engine-card">
+          <div className="card">
+            <div className="flex" style={{ alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                background: engineStatus === 'online' ? 'var(--low)' : engineStatus === 'checking' ? 'var(--primary)' : 'var(--critical)',
+                boxShadow: `0 0 7px ${engineStatus === 'online' ? 'var(--low)' : engineStatus === 'checking' ? 'var(--primary)' : 'var(--critical)'}`,
+              }} />
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
+                {engineStatus === 'online' ? 'Engine online' : engineStatus === 'checking' ? 'Connecting…' : 'Engine offline'}
+              </span>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.5 }}>
+            <div style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
               {txns.length} txns scanned
               {metrics?.f1 !== undefined ? (
-                <> · F1 <span className="mono" style={{ color: 'var(--low)' }}>{metrics.f1.toFixed(2)}</span></>
+                <> · F1 <span className="mono" style={{ color: 'var(--low)', fontWeight: 600 }}>{metrics.f1.toFixed(2)}</span></>
               ) : (
-                <> · <span className="mono" style={{ color: 'var(--text-4)' }}>No metrics</span></>
+                <> · <span style={{ color: 'var(--text-4)' }}>No metrics</span></>
               )}
             </div>
           </div>
@@ -286,6 +310,7 @@ export default function App() {
             metrics={metrics} 
             onNavigate={handleNavigate} 
             onImportClick={() => setImportOpen(true)} 
+            currentUser={currentUser}
           />
         )}
         {route === 'transactions' && (

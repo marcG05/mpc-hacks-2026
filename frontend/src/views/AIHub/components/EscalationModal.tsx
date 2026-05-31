@@ -14,18 +14,9 @@ export function EscalationModal({ activeTx, onClose, onConfirm }: EscalationModa
   const [escalationDept, setEscalationDept] = useState('Payments Compliance');
   const [escalationAssignee, setEscalationAssignee] = useState('Marcus Aurelius (L2 Lead)');
   
-  const [isRecording, setIsRecording] = useState(false);
-  const [hasRecording, setHasRecording] = useState(false);
+  const hasRecording = false;
 
-  const handleToggleRecording = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      setHasRecording(true);
-    } else {
-      setIsRecording(true);
-      setHasRecording(false);
-    }
-  };
+
 
   const handleSubmit = () => {
     onConfirm(escalationNotes, unableToDetermine, escalationDept, escalationAssignee, hasRecording);

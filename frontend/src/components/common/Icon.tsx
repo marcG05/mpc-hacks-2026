@@ -37,6 +37,7 @@ export function Icon({ name, size = 16, stroke = 1.8, className = "", style = {}
     arrowDown:<><path d="M12 5v14M5 12l7 7 7-7"/></>,
     arrowRight:<><path d="M5 12h14M13 6l6 6-6 6"/></>,
     arrowUpRight:<><path d="M7 17L17 7M8 7h9v9"/></>,
+    openExternal:<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></>,
     close:  <><path d="M18 6L6 18M6 6l12 12"/></>,
     send:   <><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></>,
     block:  <><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></>,

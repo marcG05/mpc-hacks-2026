@@ -460,7 +460,7 @@ export class EngineService implements OnModuleInit {
     }
 
     if (queryToSearch) {
-      console.log(`[Copilot Search] Executing Wikipedia search for: "${queryToSearch}"`);
+      console.log(`[Gemini Search] Executing Wikipedia search for: "${queryToSearch}"`);
       searchResults = await this.searchWikipedia(queryToSearch);
     }
 
@@ -473,7 +473,7 @@ export class EngineService implements OnModuleInit {
         `- You MUST output links to these resources using the exact markdown format: [Title](URL) (e.g. [Wikipedia: Isolation Forest](${searchResults[0]?.url})). Do not modify the URLs.\n`;
     }
 
-    const systemPrompt = `You are Falcon Copilot, an expert fraud operations assistant.
+    const systemPrompt = `You are Falcon Gemini, an expert fraud operations assistant.
 You are helping Lucas triage transaction ${tx.id}.
 Here is the transaction metadata:
 - ID: ${tx.id}

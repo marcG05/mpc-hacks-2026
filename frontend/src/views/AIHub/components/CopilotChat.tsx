@@ -42,68 +42,92 @@ export function CopilotChat({
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateRows: '1fr auto', height: '100%', overflow: 'hidden', padding: '10px 0 0 0' }}>
-      
-      {/* Scrollable messages area */}
-      <div className="chat-msgs" ref={chatRef} style={{ overflowY: 'auto', padding: '0 4px 12px 4px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'grid', gridTemplateRows: '1fr auto', height: '100%', overflow: 'hidden', background: 'var(--chat-bg)' }}>
+
+      {/* ── Scrollable messages ─────────────────────────────── */}
+      <div
+        ref={chatRef}
+        className="chat-msgs"
+      >
         {msgs.map((m, i) => (
-          <div className={`msg ${m.role === 'me' ? 'me' : ''}`} key={i} style={{ display: 'flex', gap: 10, justifyContent: m.role === 'me' ? 'flex-end' : 'flex-start' }}>
+          <div
+            key={i}
+            style={{
+              display: 'flex',
+              gap: 8,
+              justifyContent: m.role === 'me' ? 'flex-end' : 'flex-start',
+              alignItems: 'flex-start',
+            }}
+          >
+            {/* AI avatar */}
             {m.role !== 'me' && (
-              <div className="msg-ava ai" style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                <Icon name="sparkle" size={12} style={{ color: 'var(--accent-hi)' }} />
+              <div className="msg-ai-avatar">
+                <Icon name="sparkle" size={13} style={{ color: 'var(--primary)' }} />
               </div>
             )}
-            <div 
-              className="msg-bubble" 
-              style={{ 
-                maxWidth: '85%', 
-                background: m.role === 'me' ? 'var(--accent)' : 'var(--surface-2)', 
-                color: m.role === 'me' ? '#fff' : 'var(--text)', 
-                padding: '8px 12px', 
-                borderRadius: 'var(--radius-sm)', 
-                fontSize: 12.5, 
-                lineHeight: 1.5,
-                border: m.role === 'me' ? 'none' : '1px solid var(--border)',
-                whiteSpace: 'normal'
-              }}
+
+            {/* Bubble */}
+            <div
+              className={m.role === 'me' ? 'msg-user-bubble' : 'msg-ai-bubble'}
             >
+              {m.role === 'ai' && (
+                <div className="ai-card-header">
+                  <div className="ai-card-tabs">
+                    <button type="button" className="ai-card-tab active">Gemini 3.5 Flash</button>
+                    <button type="button" className="ai-card-tab">Deep-Risk</button>
+                    <button type="button" className="ai-card-tab">Core-Ensemble</button>
+                  </div>
+                  <button
+                    type="button"
+                    className="ai-card-copy"
+                    onClick={() => {
+                      try {
+                        navigator.clipboard.writeText(m.text);
+                      } catch (err) {
+                        // fallback
+                      }
+                    }}
+                    title="Copy response to clipboard"
+                  >
+                    <Icon name="note" size={11} />
+                    Copy
+                  </button>
+                </div>
+              )}
               {parseMarkdown(m.text)}
 
-              {/* Dynamic Reference / Reading Widget if AI refers to external/general knowledge */}
+              {/* Reference links widget */}
               {m.role === 'ai' && (() => {
                 const links = parseMarkdownLinks(m.text);
                 if (links.length === 0) return null;
                 return (
-                  <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
                     {links.map((link, idx) => (
-                      <div key={idx} style={{
-                        padding: '8px 12px',
-                        background: 'var(--surface-3)',
-                        border: '1px solid var(--border)',
-                        borderRadius: 'var(--radius-sm)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 12
-                      }}>
+                      <div
+                        key={idx}
+                        style={{
+                          padding: '7px 11px',
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 'var(--radius-sm)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                        }}
+                      >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                          <Icon name="arrowUpRight" size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                          <Icon name="arrowUpRight" size={11} style={{ color: 'var(--primary)', flexShrink: 0 }} />
                           <span style={{ fontSize: 10.5, color: 'var(--text-2)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                             Ref: <strong>{link.title}</strong>
                           </span>
                         </div>
-                        <a 
-                          href={link.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="mono"
-                          style={{ 
-                            fontSize: 10, 
-                            color: 'var(--accent)', 
-                            textDecoration: 'underline',
-                            fontWeight: 600,
-                            flexShrink: 0
-                          }}
+                          style={{ fontSize: 10, color: 'var(--primary)', textDecoration: 'underline', fontWeight: 600, flexShrink: 0 }}
                         >
                           Read Guide
                         </a>
@@ -113,94 +137,187 @@ export function CopilotChat({
                 );
               })()}
             </div>
+
+            {/* User avatar */}
             {m.role === 'me' && (
-              <div className="msg-ava user" style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--border-hi)', display: 'grid', placeItems: 'center', fontSize: 10.5, fontWeight: 700, flexShrink: 0 }}>
-                LM
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--chat-user-bg), #E0A800)',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color: '#1A1A1A',
+                  flexShrink: 0,
+                  marginTop: 2,
+                  boxShadow: '0 2px 6px rgba(255, 206, 0, 0.25)',
+                }}
+              >
+                ME
               </div>
             )}
           </div>
         ))}
+
+        {/* Thinking animation */}
         {thinking && (
-          <div className="msg" style={{ display: 'flex', gap: 10 }}>
-            <div className="msg-ava ai" style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-              <Icon name="sparkle" size={12} style={{ color: 'var(--accent-hi)' }} />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <div className="msg-ai-avatar">
+              <Icon name="sparkle" size={13} style={{ color: 'var(--primary)' }} />
             </div>
-            <div className="typing-dots" style={{ display: 'flex', gap: 4, alignItems: 'center', padding: '12px 16px', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-              <i style={{ width: 5, height: 5, background: 'var(--text-3)', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both' }}></i>
-              <i style={{ width: 5, height: 5, background: 'var(--text-3)', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both', animationDelay: '0.2s' }}></i>
-              <i style={{ width: 5, height: 5, background: 'var(--text-3)', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both', animationDelay: '0.4s' }}></i>
+            <div
+              className="msg-ai-bubble"
+              style={{
+                display: 'flex',
+                gap: 4,
+                alignItems: 'center',
+                padding: '12px 16px',
+              }}
+            >
+              {[0, 0.18, 0.36].map((delay, i) => (
+                <i
+                  key={i}
+                  style={{
+                    width: 5,
+                    height: 5,
+                    background: 'var(--text-4)',
+                    borderRadius: '50%',
+                    animation: `bounce 1.4s infinite ease-in-out both`,
+                    animationDelay: `${delay}s`,
+                    display: 'block',
+                  }}
+                />
+              ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* Controls panel */}
-      <div style={{ borderTop: '1px solid var(--border)', padding: '10px 4px 0 4px', background: 'var(--bg)' }}>
-        
-        {/* Suggestions */}
+      {/* ── Controls panel ──────────────────────────────────── */}
+      <div style={{ padding: '10px 0 0 0', background: 'var(--chat-bg)' }}>
+
+        {/* Suggestion chips */}
         {msgs.length <= 2 && !thinking && (
-          <div className="chat-suggest" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-            <div className="suggest-chip" onClick={() => handleAsk("Why was this flagged?")}>Why was this flagged?</div>
-            <div className="suggest-chip" onClick={() => handleAsk("Show locations on map")}>Show map</div>
-            <div className="suggest-chip" onClick={() => handleAsk("Compare to historical card baseline")}>Check card history</div>
-            <div className="suggest-chip" onClick={() => handleAsk("Verify device or IP association")}>Any related devices?</div>
+          <div className="chat-suggest">
+            {[
+              'Why was this flagged?',
+              'Show map',
+              'Check card history',
+              'Any related devices?',
+            ].map((q) => (
+              <div key={q} className="suggest-chip" onClick={() => handleAsk(q)}>{q}</div>
+            ))}
           </div>
         )}
 
-        {/* Chat form */}
-        <form className="chat-input" onSubmit={onSubmit} style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '6px 12px', marginBottom: 12 }}>
-          <Icon name="sparkle" size={15} style={{ color: 'var(--text-3)', marginRight: 8 }} />
-          <input 
-            value={input} 
-            onChange={(e) => setInput(e.target.value)} 
-            placeholder={`Ask Copilot about ${activeTx.id}...`}
-            style={{ flex: 1, background: 'transparent', border: 0, outline: 'none', color: 'var(--text)', fontSize: 13 }}
-          />
-          <button 
-            className="send-btn" 
-            type="submit" 
-            disabled={!input.trim()}
-            style={{ background: 'transparent', border: 0, padding: 4, cursor: 'pointer', color: input.trim() ? 'var(--accent-hi)' : 'var(--text-4)' }}
+        {/* Flanked Chat input form container — exactly like reference */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 16px 16px' }}>
+          {/* Flank button 1: Attachment Paperclip */}
+          <button
+            type="button"
+            className="chat-circle-btn"
+            title="Attach dataset or document"
+            onClick={() => {}}
           >
-            <Icon name="send" size={14} />
+            <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
           </button>
-        </form>
 
-        {/* Action Buttons */}
-        <div className="aip-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, paddingBottom: 6 }}>
-          <button 
-            className={`act-btn danger ${activeTx.status === 'blocked' ? 'active' : ''}`} 
-            onClick={() => handleAction("block", activeTx)}
-            style={{ opacity: activeTx.status === 'blocked' ? 1 : 0.8 }}
-            title="Block Transaction (Alt+Shift+B)"
+          {/* Flank button 2: Microphone Voice */}
+          <button
+            type="button"
+            className="chat-circle-btn"
+            title="Voice triage record"
+            onClick={() => {}}
           >
-            <Icon name="block" size={14} /> Block (Alt+Shift+B)
+            <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
+              <line x1={12} x2={12} y1={19} y2={22} />
+            </svg>
           </button>
-          <button 
-            className={`act-btn ok ${activeTx.status === 'cleared' ? 'active' : ''}`} 
-            onClick={() => handleAction("clear", activeTx)}
-            style={{ opacity: activeTx.status === 'cleared' ? 1 : 0.8 }}
-            title="Approve Transaction (Alt+Shift+A)"
+
+          {/* Chat input bar — dark pill */}
+          <form
+            className="chat-input-bar"
+            onSubmit={onSubmit}
           >
-            <Icon name="check" size={14} /> Approve (Alt+Shift+A)
-          </button>
-          <button 
-            className={`act-btn warn ${activeTx.status === 'escalated' ? 'active' : ''}`} 
-            onClick={onOpenEscalation}
-            style={{ opacity: activeTx.status === 'escalated' ? 1 : 0.8 }}
-            title="Escalate Transaction (Alt+Shift+E)"
-          >
-            <Icon name="escalate" size={14} /> Escalate (Alt+Shift+E)
-          </button>
-          <button 
-            className={`act-btn ${activeTx.status === 'false_positive' ? 'active' : ''}`} 
-            onClick={() => handleAction("false_positive", activeTx)}
-            style={{ opacity: activeTx.status === 'false_positive' ? 1 : 0.8 }}
-          >
-            <Icon name="close" size={14} /> FP Flag
-          </button>
+            <Icon name="search" size={14} style={{ color: 'rgba(255,255,255,0.3)', flexShrink: 0 }} />
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={`Ask Gemini about ${activeTx.id}…`}
+            />
+            <button
+              className="send-btn"
+              type="submit"
+              disabled={!input.trim()}
+            >
+              <Icon name="send" size={13} />
+            </button>
+          </form>
         </div>
 
+        {/* Action buttons — 4 across */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 8,
+            padding: '0 16px 12px',
+          }}
+        >
+          <button
+            className="act-btn danger"
+            onClick={() => handleAction('block', activeTx)}
+            title="Block Transaction (Ctrl+Shift+B)"
+            style={{
+              background: activeTx.status === 'blocked' ? 'var(--critical-bg)' : undefined,
+              borderColor: activeTx.status === 'blocked' ? 'rgba(220,38,38,0.30)' : undefined,
+              color: activeTx.status === 'blocked' ? 'var(--critical)' : undefined,
+            }}
+          >
+            <Icon name="block" size={13} /> Block
+          </button>
+          <button
+            className="act-btn ok"
+            onClick={() => handleAction('clear', activeTx)}
+            title="Approve Transaction (Ctrl+Shift+A)"
+            style={{
+              background: activeTx.status === 'cleared' ? 'var(--low-bg)' : undefined,
+              borderColor: activeTx.status === 'cleared' ? 'rgba(22,163,74,0.30)' : undefined,
+              color: activeTx.status === 'cleared' ? 'var(--low)' : undefined,
+            }}
+          >
+            <Icon name="check" size={13} /> Approve
+          </button>
+          <button
+            className="act-btn warn"
+            onClick={onOpenEscalation}
+            title="Escalate Transaction (Ctrl+Shift+E)"
+            style={{
+              background: activeTx.status === 'escalated' ? 'var(--high-bg)' : undefined,
+              borderColor: activeTx.status === 'escalated' ? 'rgba(234,88,12,0.30)' : undefined,
+              color: activeTx.status === 'escalated' ? 'var(--high)' : undefined,
+            }}
+          >
+            <Icon name="escalate" size={13} /> Escalate
+          </button>
+          <button
+            className="act-btn"
+            onClick={() => handleAction('false_positive', activeTx)}
+            title="Mark False Positive (Ctrl+Shift+F)"
+            style={{
+              background: activeTx.status === 'false_positive' ? 'var(--surface-hi)' : undefined,
+            }}
+          >
+            <Icon name="close" size={13} /> FP Flag
+          </button>
+        </div>
       </div>
     </div>
   );
