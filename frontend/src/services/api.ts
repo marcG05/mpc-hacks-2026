@@ -50,6 +50,10 @@ export async function fetchHealth(): Promise<{ status: string; engine: string }>
   return request('/health');
 }
 
+export async function fetchMapToken(): Promise<{ token: string }> {
+  return request('/map-token');
+}
+
 export async function fetchMetrics(): Promise<Metrics> {
   return request('/metrics');
 }
@@ -107,4 +111,17 @@ export async function fetchConfigDefaults(): Promise<any> {
   }
   return response.json();
 }
+
+export async function fetchChatResponse(payload: {
+  tx: any;
+  history: { role: 'me' | 'ai'; text: string }[];
+  message: string;
+}): Promise<{ response: string }> {
+  return request('/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
 

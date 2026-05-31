@@ -1,6 +1,509 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Icon, SevTag, Sparkline, sigColorVar, sigBgVar } from '../../components';
 import type { Transaction } from '../../types';
+import { fetchMapToken, fetchChatResponse } from '../../services/api';
+
+interface Token {
+  type: 'text' | 'bold' | 'italic' | 'code' | 'link';
+  content: string;
+  linkUrl?: string;
+  children?: Token[];
+}
+
+function parseInlineMarkdown(text: string): React.ReactNode[] {
+  if (!text) return [];
+
+  const tokenize = (str: string): Token[] => {
+    const tokens: Token[] = [];
+    let idx = 0;
+
+    while (idx < str.length) {
+      const codeRegex = /`([^`]+)`/g;
+      const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+      const boldRegex = /(\*\*|__)(.*?)\1/g;
+      const italicRegex = /(\*|_)(.*?)\1/g;
+
+      codeRegex.lastIndex = idx;
+      linkRegex.lastIndex = idx;
+      boldRegex.lastIndex = idx;
+      italicRegex.lastIndex = idx;
+
+      const codeMatch = codeRegex.exec(str);
+      const linkMatch = linkRegex.exec(str);
+      const boldMatch = boldRegex.exec(str);
+      const italicMatch = italicRegex.exec(str);
+
+      let closest: { type: 'code' | 'link' | 'bold' | 'italic'; index: number; length: number; match: RegExpExecArray } | null = null;
+
+      if (codeMatch) {
+        closest = { type: 'code', index: codeMatch.index, length: codeMatch[0].length, match: codeMatch };
+      }
+      if (linkMatch && (!closest || linkMatch.index < closest.index)) {
+        closest = { type: 'link', index: linkMatch.index, length: linkMatch[0].length, match: linkMatch };
+      }
+      if (boldMatch && (!closest || boldMatch.index < closest.index)) {
+        closest = { type: 'bold', index: boldMatch.index, length: boldMatch[0].length, match: boldMatch };
+      }
+      if (italicMatch && (!closest || italicMatch.index < closest.index)) {
+        closest = { type: 'italic', index: italicMatch.index, length: italicMatch[0].length, match: italicMatch };
+      }
+
+      if (!closest) {
+        tokens.push({ type: 'text', content: str.substring(idx) });
+        break;
+      }
+
+      const matchStart = closest.index;
+      const matchLength = closest.length;
+      const m = closest.match;
+
+      if (matchStart > idx) {
+        tokens.push({ type: 'text', content: str.substring(idx, matchStart) });
+      }
+
+      if (closest.type === 'code') {
+        tokens.push({ type: 'code', content: m[1] });
+      } else if (closest.type === 'link') {
+        tokens.push({ type: 'link', content: m[1], linkUrl: m[2] });
+      } else if (closest.type === 'bold') {
+        tokens.push({ type: 'bold', content: m[2], children: tokenize(m[2]) });
+      } else if (closest.type === 'italic') {
+        tokens.push({ type: 'italic', content: m[2], children: tokenize(m[2]) });
+      }
+
+      idx = matchStart + matchLength;
+    }
+
+    return tokens;
+  };
+
+  const renderTokens = (tokens: Token[], parentKey: string = ''): React.ReactNode[] => {
+    return tokens.map((token, i) => {
+      const key = `${parentKey}-${token.type}-${i}`;
+      switch (token.type) {
+        case 'text':
+          return token.content;
+        case 'code':
+          return (
+            <code 
+              key={key} 
+              className="mono"
+              style={{ 
+                background: 'rgba(255, 255, 255, 0.08)', 
+                padding: '2px 5px', 
+                borderRadius: 4, 
+                fontFamily: 'var(--mono)', 
+                fontSize: '0.9em', 
+                color: 'var(--accent-hi)',
+                border: '1px solid rgba(255, 255, 255, 0.05)'
+              }}
+            >
+              {token.content}
+            </code>
+          );
+        case 'link':
+          return (
+            <a 
+              key={key} 
+              href={token.linkUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ 
+                color: 'var(--accent-hi)', 
+                textDecoration: 'underline',
+                fontWeight: 500
+              }}
+            >
+              {token.content}
+            </a>
+          );
+        case 'bold':
+          return (
+            <strong key={key} style={{ color: '#fff', fontWeight: 700 }}>
+              {token.children ? renderTokens(token.children, key) : token.content}
+            </strong>
+          );
+        case 'italic':
+          return (
+            <em key={key} style={{ fontStyle: 'italic', opacity: 0.95 }}>
+              {token.children ? renderTokens(token.children, key) : token.content}
+            </em>
+          );
+        default:
+          return null;
+      }
+    });
+  };
+
+  return renderTokens(tokenize(text));
+}
+
+function parseMarkdown(text: string): React.ReactNode[] {
+  if (!text) return [];
+
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  
+  let inCodeBlock = false;
+  let codeBlockLines: string[] = [];
+  let codeLanguage = '';
+  
+  let inList = false;
+  let listItems: React.ReactNode[] = [];
+  let listType: 'ul' | 'ol' | null = null;
+
+  let inBlockquote = false;
+  let blockquoteLines: string[] = [];
+
+  const flushList = (key: string | number) => {
+    if (!inList) return;
+    const currentListItems = [...listItems];
+    const currentListType = listType;
+    if (currentListType === 'ul') {
+      elements.push(
+        <ul key={`ul-${key}`} style={{ margin: '6px 0', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {currentListItems}
+        </ul>
+      );
+    } else if (currentListType === 'ol') {
+      elements.push(
+        <ol key={`ol-${key}`} style={{ margin: '6px 0', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {currentListItems}
+        </ol>
+      );
+    }
+    inList = false;
+    listItems = [];
+    listType = null;
+  };
+
+  const flushBlockquote = (key: string | number) => {
+    if (!inBlockquote) return;
+    const qLines = [...blockquoteLines];
+    elements.push(
+      <blockquote 
+        key={`bq-${key}`} 
+        style={{ 
+          borderLeft: '3px solid var(--accent)', 
+          background: 'var(--surface-3)', 
+          padding: '6px 12px', 
+          margin: '6px 0', 
+          color: 'var(--text-2)',
+          borderRadius: '0 var(--radius-sm) var(--radius-sm) 0',
+          fontStyle: 'italic'
+        }}
+      >
+        {parseMarkdown(qLines.join('\n'))}
+      </blockquote>
+    );
+    inBlockquote = false;
+    blockquoteLines = [];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // 1. Handle Code Block tags
+    if (trimmed.startsWith('```')) {
+      if (inCodeBlock) {
+        // End of code block
+        const codeText = codeBlockLines.join('\n');
+        elements.push(
+          <pre 
+            key={`code-${i}`} 
+            style={{ 
+              background: 'var(--surface-3)', 
+              border: '1px solid var(--border)', 
+              padding: '10px 14px', 
+              borderRadius: 'var(--radius-sm)', 
+              overflowX: 'auto', 
+              fontFamily: 'var(--mono)', 
+              fontSize: '11.5px', 
+              color: 'var(--accent-hi)',
+              margin: '8px 0',
+              lineHeight: 1.4
+            }}
+          >
+            <code className={codeLanguage ? `language-${codeLanguage}` : undefined}>{codeText}</code>
+          </pre>
+        );
+        inCodeBlock = false;
+        codeBlockLines = [];
+        codeLanguage = '';
+      } else {
+        // Start of code block
+        flushList(i);
+        flushBlockquote(i);
+        inCodeBlock = true;
+        codeLanguage = trimmed.substring(3).trim();
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeBlockLines.push(line);
+      continue;
+    }
+
+    // 2. Handle Blockquote
+    if (trimmed.startsWith('>')) {
+      flushList(i);
+      if (!inBlockquote) {
+        inBlockquote = true;
+      }
+      blockquoteLines.push(line.replace(/^\s*>\s?/, ''));
+      continue;
+    } else if (inBlockquote) {
+      if (trimmed === '') {
+        flushBlockquote(i);
+      } else {
+        blockquoteLines.push(line);
+        continue;
+      }
+    }
+
+    // 3. Handle Lists
+    const bulletMatch = line.match(/^(\s*)([-*•]|\d+\.)\s+(.*)/);
+    if (bulletMatch) {
+      flushBlockquote(i);
+      const isNumbered = /^\d+\./.test(bulletMatch[2]);
+      const currentListType = isNumbered ? 'ol' : 'ul';
+      const content = bulletMatch[3];
+
+      if (inList && listType !== currentListType) {
+        flushList(i);
+      }
+
+      if (!inList) {
+        inList = true;
+        listType = currentListType;
+      }
+
+      listItems.push(
+        <li key={`li-${i}-${listItems.length}`} style={{ listStyleType: isNumbered ? 'decimal' : 'disc', color: 'var(--text)', marginLeft: 12 }}>
+          {parseInlineMarkdown(content)}
+        </li>
+      );
+      continue;
+    } else {
+      if (trimmed === '' && inList) {
+        const nextLine = lines[i + 1];
+        if (nextLine && !nextLine.trim().match(/^([-*•]|\d+\.)\s+/)) {
+          flushList(i);
+        }
+      } else if (trimmed !== '') {
+        flushList(i);
+      }
+    }
+
+    // 4. Empty Line / Paragraph Break
+    if (trimmed === '') {
+      flushList(i);
+      flushBlockquote(i);
+      continue;
+    }
+
+    // 5. Headings
+    if (trimmed.startsWith('# ')) {
+      elements.push(<h1 key={i} style={{ color: '#fff', fontSize: 16, fontWeight: 800, margin: '12px 0 6px 0', borderBottom: '1px solid var(--border)', paddingBottom: 4 }}>{parseInlineMarkdown(trimmed.substring(2))}</h1>);
+      continue;
+    }
+    if (trimmed.startsWith('## ')) {
+      elements.push(<h2 key={i} style={{ color: '#fff', fontSize: 14.5, fontWeight: 700, margin: '10px 0 5px 0' }}>{parseInlineMarkdown(trimmed.substring(3))}</h2>);
+      continue;
+    }
+    if (trimmed.startsWith('### ')) {
+      elements.push(<h3 key={i} style={{ color: '#fff', fontSize: 13, fontWeight: 700, margin: '8px 0 4px 0' }}>{parseInlineMarkdown(trimmed.substring(4))}</h3>);
+      continue;
+    }
+    if (trimmed.startsWith('#### ')) {
+      elements.push(<h4 key={i} style={{ color: '#fff', fontSize: 12, fontWeight: 700, margin: '6px 0 3px 0' }}>{parseInlineMarkdown(trimmed.substring(5))}</h4>);
+      continue;
+    }
+
+    // 6. Horizontal Rule
+    if (/^(---|___|\*\*\*)$/.test(trimmed)) {
+      elements.push(<hr key={i} style={{ border: 0, borderTop: '1px solid var(--border)', margin: '12px 0' }} />);
+      continue;
+    }
+
+    // Default: paragraph
+    elements.push(
+      <p key={i} style={{ margin: '6px 0', lineHeight: 1.5, color: 'var(--text)' }}>
+        {parseInlineMarkdown(line)}
+      </p>
+    );
+  }
+
+  flushList(lines.length);
+  flushBlockquote(lines.length);
+
+  return elements;
+}
+
+const COUNTRY_LNL: Record<string, [number, number]> = {
+  US: [-100, 40],
+  CA: [-95, 60],
+  GB: [-2, 54],
+  DE: [10, 51],
+  FR: [2, 46],
+  CN: [104, 35],
+  JP: [138, 36],
+  BR: [-52, -14],
+  IN: [78, 20],
+  RU: [105, 61],
+  AU: [133, -25],
+  ZA: [25, -30],
+  MX: [-102, 23],
+  IT: [12, 41],
+  ES: [-3, 40],
+  NL: [5, 52],
+  SG: [103, 1],
+};
+
+function getCountryLngLat(code: string): [number, number] {
+  return COUNTRY_LNL[code.toUpperCase()] || [-100, 40];
+}
+
+interface MapboxMapProps {
+  originCountry: string;
+  destCountry: string;
+}
+
+export function MapboxMap({ originCountry, destCountry }: MapboxMapProps) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [token, setToken] = useState<string>('');
+
+  useEffect(() => {
+    async function getToken() {
+      try {
+        const res = await fetchMapToken();
+        if (res.token) {
+          setToken(res.token);
+        }
+      } catch (e) {
+        console.error('Failed to load map token:', e);
+      }
+    }
+    getToken();
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+
+    if ((window as any).mapboxgl) {
+      setLoaded(true);
+      return;
+    }
+
+    const link = document.createElement('link');
+    link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.2.0/mapbox-gl.css';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+
+    const script = document.createElement('script');
+    script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.2.0/mapbox-gl.js';
+    script.async = true;
+    script.onload = () => setLoaded(true);
+    document.body.appendChild(script);
+  }, [token]);
+
+  useEffect(() => {
+    if (!loaded || !token || !mapContainerRef.current) return;
+
+    const mapboxgl = (window as any).mapboxgl;
+    mapboxgl.accessToken = token;
+
+    const origin = getCountryLngLat(originCountry);
+    const dest = getCountryLngLat(destCountry);
+    
+    const bounds = new mapboxgl.LngLatBounds();
+    bounds.extend(origin);
+    bounds.extend(dest);
+
+    const map = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: 'mapbox://styles/mapbox/dark-v11',
+      bounds: bounds,
+      fitBoundsOptions: { padding: 40, maxZoom: 5 }
+    });
+
+    mapRef.current = map;
+
+    map.on('load', () => {
+      new mapboxgl.Marker({ color: '#38c08a' })
+        .setLngLat(origin)
+        .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h4>Cardholder Home</h4><p>${originCountry}</p>`))
+        .addTo(map);
+
+      new mapboxgl.Marker({ color: '#f0616d' })
+        .setLngLat(dest)
+        .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`<h4>Merchant Store</h4><p>${destCountry}</p>`))
+        .addTo(map);
+
+      map.addSource('route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: [origin, dest]
+          }
+        }
+      });
+
+      map.addLayer({
+        id: 'route',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#f0616d',
+          'line-width': 2.5,
+          'line-dasharray': [2, 2]
+        }
+      });
+    });
+
+    return () => {
+      map.remove();
+    };
+  }, [loaded, token, originCountry, destCountry]);
+
+  if (!token) {
+    return (
+      <div style={{ height: 180, display: 'grid', placeItems: 'center', background: '#090e1a', color: 'var(--text-3)', fontSize: 12, borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+        No Mapbox token found in environment.
+      </div>
+    );
+  }
+
+  if (!loaded) {
+    return (
+      <div style={{ height: 180, display: 'grid', placeItems: 'center', background: '#090e1a', color: 'var(--text-3)', fontSize: 12, borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+        <div className="flex" style={{ alignItems: 'center', gap: 6 }}>
+          <Icon name="refresh" className="spin" size={16} />
+          <span>Loading map client...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      ref={mapContainerRef} 
+      style={{ height: 180, width: '100%', borderRadius: 'var(--radius)', border: '1px solid var(--border)', overflow: 'hidden' }}
+    />
+  );
+}
+
 
 interface AIHubProps {
   txns: Transaction[];
@@ -61,6 +564,9 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
   // 3. Active panel context tab state
   const [activeTab, setActiveTab] = useState<TabKey>('signals');
 
+  // Expanded signal details card index state
+  const [expandedSignalKey, setExpandedSignalKey] = useState<string | null>(null);
+
   // 4. Chat messaging states
   const [msgs, setMsgs] = useState<{ role: 'me' | 'ai'; text: string }[]>([]);
   const [input, setInput] = useState('');
@@ -73,10 +579,11 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
     setMsgs([
       {
         role: 'ai',
-        text: `Hi Lucas. I've analyzed transaction **${activeTx.id}** (${activeTx.merchant}, amount **$${activeTx.amount.toFixed(2)}**). It scored **${(activeTx.score * 100).toFixed(0)}% risk**.\n\nI'm ready to investigate. You can ask about: \n- **History** of ${activeTx.card}\n- **Device** and **IP** network analysis\n- **Geographic anomalies** or **Risk signals** triggered.`
+        text: `Hi Lucas. I've initiated analysis on transaction **${activeTx.id}**. \n\nYou can select the metadata fields in the top context card or ask me to open specific diagnostic panels to begin triage.`
       }
     ]);
     setActiveTab('signals');
+    setExpandedSignalKey(null);
   }, [activeTx?.id]);
 
   // Auto-scroll chat
@@ -86,56 +593,49 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
     }
   }, [msgs, thinking]);
 
-  // 5. Mock responses matching user questions & activating panels
-  const handleAsk = (q: string) => {
+  const handleAsk = async (q: string) => {
     if (!q.trim() || !activeTx) return;
     
-    // Add user message
     setMsgs(prev => [...prev, { role: 'me', text: q }]);
     setInput('');
     setThinking(true);
 
     const ql = q.toLowerCase();
-    let reply = '';
-
-    // Handle questions and auto-switch tabs
+    
+    // Auto-switch tabs based on keywords
     if (/why|flag|reason|signal|trigger/.test(ql)) {
       setActiveTab('signals');
-      reply = `I have loaded the **Risk Signals** panel on the right.\n\n${activeTx.id} triggered ${activeTx.signals.length} high-confidence rule signals: \n` +
-        activeTx.signals.map(s => `• **${s.name}** (+${s.weight.toFixed(2)} weight): ${s.detail}`).join('\n') +
-        `\n\nThe ensemble combines these weights with a local Isolation Forest anomaly model, leading to the overall **${(activeTx.score * 100).toFixed(0)}% score**.`;
     } 
     else if (/location|map|country|cross-border|where/.test(ql)) {
       setActiveTab('location');
-      const origin = getCountryCoord(activeTx.country);
-      const dest = getCountryCoord(activeTx.merchantCountry);
-      reply = `I have opened the **Geographic Map** visualization.\n\n• **Cardholder Country**: ${origin.name} (${activeTx.country})\n• **Merchant Country**: ${dest.name} (${activeTx.merchantCountry})\n\nThis cross-border route represents a physical distance of approximately **${activeTx.country === activeTx.merchantCountry ? '0' : '3,840'} miles**. Since the card was used locally in **${origin.name}** just 18 minutes prior, this represents an impossible transit velocity.`;
     } 
     else if (/device|ip|shared|network|device-farm|reuse/.test(ql)) {
       setActiveTab('device');
-      reply = `I've opened the **Network Infrastructure** graph on the right.\n\n• **Device Fingerprint**: \`${activeTx.device || 'device_9a4f'}\`\n• **IP Address**: \`${activeTx.ip || '184.22.91.4'}\`\n\nOur system detected that this IP address is currently hosting **3 other active cards** within a 1-hour window, suggesting a dynamic routing proxy or coordinated card testing. I strongly recommend blocking this endpoint.`;
     } 
     else if (/history|card|spending|median|average|previous/.test(ql)) {
       setActiveTab('card');
-      reply = `I've opened the **Card Baseline** panel on the right.\n\nOn card **${activeTx.card}**, the usual median purchase is **$${activeTx.cardMedian.toFixed(2)}**. The current charge of **$${activeTx.amount.toFixed(2)}** is **${(activeTx.amount / Math.max(1, activeTx.cardMedian)).toFixed(1)}x** their historical median. The historical activity timeline shows a sudden high-velocity volume burst after months of low retail activity.`;
     } 
     else if (/amount|cost|score|breakdown/.test(ql)) {
       setActiveTab('amount');
-      reply = `I have opened the **Score Contribution** graph.\n\nYou can see how the rule-based ensemble is blended 60/40 with the Isolation Forest anomaly detector. The highest single contributor is the **${activeTx.signals[0]?.name || 'unusual amount'}** (+${(activeTx.signals[0]?.weight || 1).toFixed(2)}).`;
-    }
-    else if (/recommend|do|action|block|approve/.test(ql)) {
-      const actionRec = activeTx.score >= 0.8 ? "Block & Escalate" : activeTx.score >= 0.5 ? "Hold for verification" : "Approve";
-      reply = `**Recommendation: ${actionRec}**.\n\nThe high confidence score of ${(activeTx.score * 100).toFixed(0)}% is supported by multiple infrastructure flags. The potential chargeback liability on this $${activeTx.amount.toFixed(2)} transaction exceeds the merchant threshold.`;
-    } 
-    else {
-      reply = `I'm tracking **${activeTx.id}**. Ask me to show the **map**, analyze the **card history**, or inspect the **triggered signals** to load live charts in the investigation panel.`;
     }
 
-    // Simulate thinking delay then stream reply
-    setTimeout(() => {
+    try {
+      const res = await fetchChatResponse({
+        tx: activeTx,
+        history: msgs,
+        message: q
+      });
       setThinking(false);
-      setMsgs(prev => [...prev, { role: 'ai', text: reply }]);
-    }, 600);
+      if (res && res.response) {
+        setMsgs(prev => [...prev, { role: 'ai', text: res.response }]);
+      } else {
+        setMsgs(prev => [...prev, { role: 'ai', text: 'Error: Empty response from Copilot.' }]);
+      }
+    } catch (e: any) {
+      console.error('Gemini chat failed:', e);
+      setThinking(false);
+      setMsgs(prev => [...prev, { role: 'ai', text: `Failed to generate response: ${e.message}` }]);
+    }
   };
 
   // Render Dynamic Panel Content
@@ -149,15 +649,92 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
             <div className="sec-label" style={{ margin: 0 }}><Icon name="pulse" size={13} /> Active Signals ({activeTx.signals.length})</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {activeTx.signals.map((s, i) => (
-                <div className="signal" key={i} style={{ display: 'flex', gap: 10, background: 'var(--surface-2)', padding: 10, borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                  <div className="signal-ico" style={{ display: 'grid', placeItems: 'center', background: sigBgVar(s.color), color: sigColorVar(s.color), width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }}>
-                    <Icon name={s.icon} size={14} />
+                <div 
+                  key={s.key || i}
+                  className="signal" 
+                  onClick={() => setExpandedSignalKey(expandedSignalKey === s.key ? null : s.key)}
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    gap: 8, 
+                    background: expandedSignalKey === s.key ? 'var(--surface-3)' : 'var(--surface-2)', 
+                    padding: 12, 
+                    borderRadius: 'var(--radius-sm)', 
+                    border: expandedSignalKey === s.key ? '1px solid var(--accent-line)' : '1px solid var(--border)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: 10, width: '100%', alignItems: 'center' }}>
+                    <div className="signal-ico" style={{ display: 'grid', placeItems: 'center', background: sigBgVar(s.color), color: sigColorVar(s.color), width: 28, height: 28, borderRadius: '50%', flexShrink: 0 }}>
+                      <Icon name={s.icon} size={14} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--text-1)' }}>{s.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2, lineHeight: 1.3 }}>{s.detail}</div>
+                    </div>
+                    <div className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--critical)' }}>+{s.weight.toFixed(1)}</div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--text-1)' }}>{s.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2, lineHeight: 1.3 }}>{s.detail}</div>
-                  </div>
-                  <div className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--critical)' }}>+{s.weight.toFixed(1)}</div>
+
+                  {/* Expanded Signal Details & Audit Recommendations */}
+                  {expandedSignalKey === s.key && (
+                    <div style={{ 
+                      padding: '8px 10px', 
+                      background: 'var(--surface-hi)', 
+                      borderRadius: 'var(--radius-sm)', 
+                      fontSize: 11.5, 
+                      color: 'var(--text-2)',
+                      borderTop: '1px solid var(--border)',
+                      lineHeight: 1.45,
+                      marginTop: 4,
+                      animation: 'fadeIn 0.2s ease'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    >
+                      <div style={{ fontWeight: 600, color: '#fff', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name="info" size={11} style={{ color: 'var(--accent-hi)' }} />
+                        Investigation Protocol:
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {s.name === 'Amount Anomaly' && (
+                          <>
+                            <div>• Check if cardholder has purchased high-value items in this category before.</div>
+                            <div>• Contact customer to verify sudden deviation from typical ${activeTx.cardMedian} spend.</div>
+                          </>
+                        )}
+                        {s.name === 'Geographic Mismatch' && (
+                          <>
+                            <div>• Review login IPs to see if traveler notice was posted.</div>
+                            <div>• Check time difference: transaction occurred in different timezone.</div>
+                          </>
+                        )}
+                        {s.name === 'Velocity Spike' && (
+                          <>
+                            <div>• Multiple cards checked out in quick succession. Indicates automated script.</div>
+                            <div>• Flag associated session tokens.</div>
+                          </>
+                        )}
+                        {s.name === 'Device Reuse' && (
+                          <>
+                            <div>• Device fingerprinted is associated with dynamic cards list.</div>
+                            <div>• Decline all transactions matching hardware hash.</div>
+                          </>
+                        )}
+                        {s.name === 'Card-Testing Pattern' && (
+                          <>
+                            <div>• Low value test charge followed by a high value charge.</div>
+                            <div>• Block card immediately and notify issuer bank.</div>
+                          </>
+                        )}
+                        {!['Amount Anomaly', 'Geographic Mismatch', 'Velocity Spike', 'Device Reuse', 'Card-Testing Pattern'].includes(s.name) && (
+                          <>
+                            <div>• Audit transaction payload against rule configuration.</div>
+                            <div>• Examine network hops and card dispute records.</div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               {activeTx.signals.length === 0 && (
@@ -172,38 +749,12 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
         const dest = getCountryCoord(activeTx.merchantCountry);
         const isCrossBorder = activeTx.country !== activeTx.merchantCountry;
 
-        // Dynamic Bezier curves for map arcs
-        const dx = dest.x - origin.x;
-        const dy = dest.y - origin.y;
-        const mx = origin.x + dx / 2;
-        const my = origin.y + dy / 2 - 30; // Curve arc upwards
-
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div className="sec-label" style={{ margin: 0 }}><Icon name="globe" size={13} /> Geographic Routing</div>
             
-            {/* World Map vector placeholder (Interactive SVG) */}
-            <div style={{ background: 'var(--surface-hi)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', position: 'relative', height: 160, overflow: 'hidden' }}>
-              <svg width="100%" height="100%" viewBox="0 0 500 160" style={{ background: '#090e1a' }}>
-                {/* Simulated continents/grid lines */}
-                <path d="M 30,50 Q 80,40 100,60 T 160,110 T 200,120 M 230,40 Q 280,30 320,60 T 400,90" stroke="rgba(255,255,255,0.03)" strokeWidth="8" fill="none" />
-                
-                {/* Arc path */}
-                {isCrossBorder && (
-                  <>
-                    <path d={`M ${origin.x} ${origin.y} Q ${mx} ${my} ${dest.x} ${dest.y}`} fill="none" stroke="var(--critical)" strokeWidth="2.5" strokeDasharray="4,4" className="pulse" />
-                    <circle cx={mx} cy={my - 5} r="4" fill="#fff" />
-                  </>
-                )}
-
-                {/* Country Pins */}
-                <circle cx={origin.x} cy={origin.y} r="6" fill="var(--low)" />
-                <circle cx={origin.x} cy={origin.y} r="12" fill="var(--low)" opacity="0.3" />
-                
-                <circle cx={dest.x} cy={dest.y} r="6" fill="var(--critical)" />
-                <circle cx={dest.x} cy={dest.y} r="12" fill="var(--critical)" opacity="0.3" />
-              </svg>
-            </div>
+            {/* Interactive Mapbox Map */}
+            <MapboxMap originCountry={activeTx.country} destCountry={activeTx.merchantCountry} />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5 }}>
               <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
@@ -234,7 +785,6 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div className="sec-label" style={{ margin: 0 }}><Icon name="device" size={13} /> Infrastructure & Network</div>
             
-            {/* Device association diagram */}
             <div style={{ background: 'var(--surface-hi)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 12 }}>
               <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.05em' }}>
                 Shared Device Fingerprint (last 24h)
@@ -381,7 +931,7 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
   };
 
   return (
-    <div className="content fade-in" style={{ height: 'calc(100vh - 60px)', display: 'grid', gridTemplateColumns: '260px 1fr 340px', gap: 14, padding: '0 14px 14px 14px', overflow: 'hidden' }}>
+    <div className="content fade-in" style={{ height: 'calc(100vh - 60px)', display: 'grid', gridTemplateColumns: '260px 1fr 420px', gap: 14, padding: '0 14px 14px 14px', overflow: 'hidden' }}>
       
       {/* 1. Left triage queue sidebar */}
       <div style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100%', overflow: 'hidden', borderRight: '1px solid var(--border)', paddingRight: 12 }}>
@@ -428,184 +978,198 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
         </div>
       </div>
 
-      {/* 2. Middle AI Investigation Chat Arena */}
+      {/* 2. Middle AI Investigation Chat Arena (Combined 30% height context + 70% height chat) */}
       {activeTx ? (
-        <div style={{ display: 'grid', gridTemplateRows: 'auto auto 1fr auto', height: '100%', overflow: 'hidden', padding: '0 8px' }}>
+        <div style={{ display: 'grid', gridTemplateRows: '30% 70%', height: '100%', overflow: 'hidden', padding: '0 8px' }}>
           
-          {/* Header metadata summary card */}
-          <div style={{ padding: '10px 0' }}>
-            <div className="card" style={{ padding: 12, background: 'var(--surface)', border: '1px solid var(--border)' }}>
-              <div className="flex between" style={{ alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)' }}>${activeTx.amount.toFixed(2)}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{activeTx.merchant} · {activeTx.category}</div>
+          {/* Combined Transaction Card & Chip Grid Selector (Row 1: 30%) */}
+          <div className="card" style={{ 
+            height: 'calc(100% - 10px)', 
+            margin: '5px 0', 
+            padding: '14px 16px', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'space-between',
+            background: 'var(--surface)', 
+            border: '1px solid var(--border-hi)',
+            borderRadius: 'var(--radius)',
+            overflow: 'hidden'
+          }}>
+            {/* Header info */}
+            <div className="flex between" style={{ alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>${activeTx.amount.toFixed(2)}</span>
+                  <span className="mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>{activeTx.id}</span>
                 </div>
-                <SevTag score={activeTx.score} />
+                <div style={{ fontSize: 11.5, color: 'var(--text-2)', marginTop: 2 }}>{activeTx.merchant} · {activeTx.category}</div>
               </div>
+              <SevTag score={activeTx.score} />
+            </div>
+
+            {/* Selection Chips inside the same card */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(3, 1fr)', 
+              gap: '6px 8px', 
+              marginTop: 10 
+            }}>
+              {[
+                { tab: 'amount', label: 'Amount', icon: 'trend', value: `$${activeTx.amount}` },
+                { tab: 'location', label: 'Geographic', icon: 'globe', value: `${activeTx.country} ➔ ${activeTx.merchantCountry}` },
+                { tab: 'device', label: 'Device ID', icon: 'device', value: activeTx.device ? activeTx.device.slice(0, 10) : 'None' },
+                { tab: 'card', label: 'Payment Card', icon: 'history', value: activeTx.card ? activeTx.card.slice(0, 12) : 'None' },
+                { tab: 'signals', label: 'Trigger Rules', icon: 'pulse', value: `${activeTx.signals.length} Fired` },
+                { tab: 'time', label: 'Timestamp', icon: 'clock', value: activeTx.time }
+              ].map((item) => {
+                const isActive = activeTab === item.tab;
+                return (
+                  <button 
+                    key={item.tab}
+                    onClick={() => setActiveTab(item.tab as TabKey)}
+                    className="chip"
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                      padding: '5px 8px', 
+                      background: isActive ? 'var(--accent-soft)' : 'var(--surface-2)', 
+                      border: isActive ? '1px solid var(--accent-line)' : '1px solid var(--border)', 
+                      color: isActive ? 'var(--accent-hi)' : 'var(--text-2)', 
+                      borderRadius: 'var(--radius-sm)', 
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      height: 42
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: isActive ? 'var(--accent-hi)' : 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                      <Icon name={item.icon} size={9} />
+                      {item.label}
+                    </div>
+                    <div className="mono" style={{ fontSize: 10.5, fontWeight: isActive ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', marginTop: 2 }}>
+                      {item.value}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Context chips */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
-            <button 
-              className={`chip ${activeTab === 'amount' ? 'active' : ''}`}
-              onClick={() => setActiveTab('amount')}
-              style={{ padding: '5px 8px', fontSize: 11.5, background: activeTab === 'amount' ? 'var(--accent-soft)' : 'var(--surface-2)', border: activeTab === 'amount' ? '1px solid var(--accent-line)' : '1px solid var(--border)', color: activeTab === 'amount' ? 'var(--accent-hi)' : 'var(--text-2)', borderRadius: 16, cursor: 'pointer' }}
-            >
-              <Icon name="trend" size={11} style={{ marginRight: 4 }} /> Amt: ${activeTx.amount}
-            </button>
+          {/* Chat scrolling viewport + Input Area (Row 2: 70%) */}
+          <div style={{ display: 'grid', gridTemplateRows: '1fr auto', height: '100%', overflow: 'hidden', padding: '10px 0 0 0' }}>
             
-            <button 
-              className={`chip ${activeTab === 'location' ? 'active' : ''}`}
-              onClick={() => setActiveTab('location')}
-              style={{ padding: '5px 8px', fontSize: 11.5, background: activeTab === 'location' ? 'var(--accent-soft)' : 'var(--surface-2)', border: activeTab === 'location' ? '1px solid var(--accent-line)' : '1px solid var(--border)', color: activeTab === 'location' ? 'var(--accent-hi)' : 'var(--text-2)', borderRadius: 16, cursor: 'pointer' }}
-            >
-              <Icon name="globe" size={11} style={{ marginRight: 4 }} /> Geo: {activeTx.country}→{activeTx.merchantCountry}
-            </button>
-
-            <button 
-              className={`chip ${activeTab === 'device' ? 'active' : ''}`}
-              onClick={() => setActiveTab('device')}
-              style={{ padding: '5px 8px', fontSize: 11.5, background: activeTab === 'device' ? 'var(--accent-soft)' : 'var(--surface-2)', border: activeTab === 'device' ? '1px solid var(--accent-line)' : '1px solid var(--border)', color: activeTab === 'device' ? 'var(--accent-hi)' : 'var(--text-2)', borderRadius: 16, cursor: 'pointer' }}
-            >
-              <Icon name="device" size={11} style={{ marginRight: 4 }} /> Dev: {activeTx.device ? activeTx.device.slice(0, 7) : 'n/a'}
-            </button>
-
-            <button 
-              className={`chip ${activeTab === 'card' ? 'active' : ''}`}
-              onClick={() => setActiveTab('card')}
-              style={{ padding: '5px 8px', fontSize: 11.5, background: activeTab === 'card' ? 'var(--accent-soft)' : 'var(--surface-2)', border: activeTab === 'card' ? '1px solid var(--accent-line)' : '1px solid var(--border)', color: activeTab === 'card' ? 'var(--accent-hi)' : 'var(--text-2)', borderRadius: 16, cursor: 'pointer' }}
-            >
-              <Icon name="history" size={11} style={{ marginRight: 4 }} /> Card: {activeTx.card ? activeTx.card.slice(0, 8) : 'n/a'}
-            </button>
-
-            <button 
-              className={`chip ${activeTab === 'signals' ? 'active' : ''}`}
-              onClick={() => setActiveTab('signals')}
-              style={{ padding: '5px 8px', fontSize: 11.5, background: activeTab === 'signals' ? 'var(--accent-soft)' : 'var(--surface-2)', border: activeTab === 'signals' ? '1px solid var(--accent-line)' : '1px solid var(--border)', color: activeTab === 'signals' ? 'var(--accent-hi)' : 'var(--text-2)', borderRadius: 16, cursor: 'pointer' }}
-            >
-              <Icon name="pulse" size={11} style={{ marginRight: 4 }} /> Rules: {activeTx.signals.length} hits
-            </button>
-
-            <button 
-              className={`chip ${activeTab === 'time' ? 'active' : ''}`}
-              onClick={() => setActiveTab('time')}
-              style={{ padding: '5px 8px', fontSize: 11.5, background: activeTab === 'time' ? 'var(--accent-soft)' : 'var(--surface-2)', border: activeTab === 'time' ? '1px solid var(--accent-line)' : '1px solid var(--border)', color: activeTab === 'time' ? 'var(--accent-hi)' : 'var(--text-2)', borderRadius: 16, cursor: 'pointer' }}
-            >
-              <Icon name="clock" size={11} style={{ marginRight: 4 }} /> Time: {activeTx.time}
-            </button>
-          </div>
-
-          {/* Chat scrolling viewport */}
-          <div className="chat-msgs" ref={chatRef} style={{ overflowY: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {msgs.map((m, i) => (
-              <div className={`msg ${m.role === 'me' ? 'me' : ''}`} key={i} style={{ display: 'flex', gap: 10, justifyContent: m.role === 'me' ? 'flex-end' : 'flex-start' }}>
-                {m.role !== 'me' && (
+            {/* Scrollable messages area */}
+            <div className="chat-msgs" ref={chatRef} style={{ overflowY: 'auto', padding: '0 4px 12px 4px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {msgs.map((m, i) => (
+                <div className={`msg ${m.role === 'me' ? 'me' : ''}`} key={i} style={{ display: 'flex', gap: 10, justifyContent: m.role === 'me' ? 'flex-end' : 'flex-start' }}>
+                  {m.role !== 'me' && (
+                    <div className="msg-ava ai" style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                      <Icon name="sparkle" size={12} style={{ color: 'var(--accent-hi)' }} />
+                    </div>
+                  )}
+                  <div 
+                    className="msg-bubble" 
+                    style={{ 
+                      maxWidth: '85%', 
+                      background: m.role === 'me' ? 'var(--accent)' : 'var(--surface-2)', 
+                      color: m.role === 'me' ? '#fff' : 'var(--text)', 
+                      padding: '8px 12px', 
+                      borderRadius: 'var(--radius-sm)', 
+                      fontSize: 12.5, 
+                      lineHeight: 1.5,
+                      border: m.role === 'me' ? 'none' : '1px solid var(--border)',
+                      whiteSpace: 'normal'
+                    }}
+                  >
+                    {parseMarkdown(m.text)}
+                  </div>
+                  {m.role === 'me' && (
+                    <div className="msg-ava user" style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--border-hi)', display: 'grid', placeItems: 'center', fontSize: 10.5, fontWeight: 700, flexShrink: 0 }}>
+                      LM
+                    </div>
+                  )}
+                </div>
+              ))}
+              {thinking && (
+                <div className="msg" style={{ display: 'flex', gap: 10 }}>
                   <div className="msg-ava ai" style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                     <Icon name="sparkle" size={12} style={{ color: 'var(--accent-hi)' }} />
                   </div>
-                )}
-                <div 
-                  className="msg-bubble" 
-                  style={{ 
-                    maxWidth: '85%', 
-                    background: m.role === 'me' ? 'var(--accent)' : 'var(--surface-2)', 
-                    color: m.role === 'me' ? '#fff' : 'var(--text)', 
-                    padding: '8px 12px', 
-                    borderRadius: 'var(--radius-sm)', 
-                    fontSize: 12.5, 
-                    lineHeight: 1.5,
-                    border: m.role === 'me' ? 'none' : '1px solid var(--border)',
-                    whiteSpace: 'pre-line'
-                  }}
-                >
-                  {m.text}
-                </div>
-                {m.role === 'me' && (
-                  <div className="msg-ava user" style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--border-hi)', display: 'grid', placeItems: 'center', fontSize: 10.5, fontWeight: 700, flexShrink: 0 }}>
-                    LM
+                  <div className="typing-dots" style={{ display: 'flex', gap: 4, alignItems: 'center', padding: '12px 16px', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                    <i style={{ width: 5, height: 5, background: 'var(--text-3)', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both' }}></i>
+                    <i style={{ width: 5, height: 5, background: 'var(--text-3)', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both', animationDelay: '0.2s' }}></i>
+                    <i style={{ width: 5, height: 5, background: 'var(--text-3)', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both', animationDelay: '0.4s' }}></i>
                   </div>
-                )}
-              </div>
-            ))}
-            {thinking && (
-              <div className="msg" style={{ display: 'flex', gap: 10 }}>
-                <div className="msg-ava ai" style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                  <Icon name="sparkle" size={12} style={{ color: 'var(--accent-hi)' }} />
                 </div>
-                <div className="typing-dots" style={{ display: 'flex', gap: 4, alignItems: 'center', padding: '12px 16px', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                  <i style={{ width: 5, height: 5, background: 'var(--text-3)', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both' }}></i>
-                  <i style={{ width: 5, height: 5, background: 'var(--text-3)', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both', animationDelay: '0.2s' }}></i>
-                  <i style={{ width: 5, height: 5, background: 'var(--text-3)', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both', animationDelay: '0.4s' }}></i>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Chat input form and decision bar */}
-          <div style={{ borderTop: '1px solid var(--border)', padding: '10px 0 0' }}>
-            
-            {/* Inline quick suggestion chips */}
-            {msgs.length <= 2 && !thinking && (
-              <div className="chat-suggest" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                <div className="suggest-chip" onClick={() => handleAsk("Why was this flagged?")}>Why was this flagged?</div>
-                <div className="suggest-chip" onClick={() => handleAsk("Show me the map & locations")}>Show locations on map</div>
-                <div className="suggest-chip" onClick={() => handleAsk("Compare to historical card baseline")}>Check card history</div>
-                <div className="suggest-chip" onClick={() => handleAsk("Verify device or IP association")}>Any related devices?</div>
-              </div>
-            )}
-
-            {/* Chat submit bar */}
-            <form className="chat-input" onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '6px 12px', marginBottom: 12 }}>
-              <Icon name="sparkle" size={15} style={{ color: 'var(--text-3)', marginRight: 8 }} />
-              <input 
-                value={input} 
-                onChange={(e) => setInput(e.target.value)} 
-                placeholder={`Ask Copilot about ${activeTx.id}...`}
-                style={{ flex: 1, background: 'transparent', border: 0, outline: 'none', color: '#fff', fontSize: 13 }}
-              />
-              <button 
-                className="send-btn" 
-                type="submit" 
-                disabled={!input.trim()}
-                style={{ background: 'transparent', border: 0, padding: 4, cursor: 'pointer', color: input.trim() ? 'var(--accent-hi)' : 'var(--text-4)' }}
-              >
-                <Icon name="send" size={14} />
-              </button>
-            </form>
-
-            {/* Analyst triage actions */}
-            <div className="aip-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, paddingBottom: 6 }}>
-              <button 
-                className={`act-btn danger ${activeTx.status === 'blocked' ? 'active' : ''}`} 
-                onClick={() => onAction("block", activeTx)}
-                style={{ opacity: activeTx.status === 'blocked' ? 1 : 0.8 }}
-              >
-                <Icon name="block" size={14} /> Block
-              </button>
-              <button 
-                className={`act-btn ok ${activeTx.status === 'cleared' ? 'active' : ''}`} 
-                onClick={() => onAction("clear", activeTx)}
-                style={{ opacity: activeTx.status === 'cleared' ? 1 : 0.8 }}
-              >
-                <Icon name="check" size={14} /> Approve
-              </button>
-              <button 
-                className={`act-btn warn ${activeTx.status === 'escalated' ? 'active' : ''}`} 
-                onClick={() => onAction("escalate", activeTx)}
-                style={{ opacity: activeTx.status === 'escalated' ? 1 : 0.8 }}
-              >
-                <Icon name="escalate" size={14} /> Escalate
-              </button>
-              <button 
-                className={`act-btn ${activeTx.status === 'false_positive' ? 'active' : ''}`} 
-                onClick={() => onAction("false_positive", activeTx)}
-                style={{ opacity: activeTx.status === 'false_positive' ? 1 : 0.8 }}
-              >
-                <Icon name="flag" size={14} /> FP
-              </button>
+              )}
             </div>
 
+            {/* Controls panel */}
+            <div style={{ borderTop: '1px solid var(--border)', padding: '10px 4px 0 4px', background: 'var(--bg)' }}>
+              
+              {/* Suggestions */}
+              {msgs.length <= 2 && !thinking && (
+                <div className="chat-suggest" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                  <div className="suggest-chip" onClick={() => handleAsk("Why was this flagged?")}>Why was this flagged?</div>
+                  <div className="suggest-chip" onClick={() => handleAsk("Show locations on map")}>Show map</div>
+                  <div className="suggest-chip" onClick={() => handleAsk("Compare to historical card baseline")}>Check card history</div>
+                  <div className="suggest-chip" onClick={() => handleAsk("Verify device or IP association")}>Any related devices?</div>
+                </div>
+              )}
+
+              {/* Chat form */}
+              <form className="chat-input" onSubmit={(e) => { e.preventDefault(); handleAsk(input); }} style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '6px 12px', marginBottom: 12 }}>
+                <Icon name="sparkle" size={15} style={{ color: 'var(--text-3)', marginRight: 8 }} />
+                <input 
+                  value={input} 
+                  onChange={(e) => setInput(e.target.value)} 
+                  placeholder={`Ask Copilot about ${activeTx.id}...`}
+                  style={{ flex: 1, background: 'transparent', border: 0, outline: 'none', color: '#fff', fontSize: 13 }}
+                />
+                <button 
+                  className="send-btn" 
+                  type="submit" 
+                  disabled={!input.trim()}
+                  style={{ background: 'transparent', border: 0, padding: 4, cursor: 'pointer', color: input.trim() ? 'var(--accent-hi)' : 'var(--text-4)' }}
+                >
+                  <Icon name="send" size={14} />
+                </button>
+              </form>
+
+              {/* Action Buttons */}
+              <div className="aip-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, paddingBottom: 6 }}>
+                <button 
+                  className={`act-btn danger ${activeTx.status === 'blocked' ? 'active' : ''}`} 
+                  onClick={() => onAction("block", activeTx)}
+                  style={{ opacity: activeTx.status === 'blocked' ? 1 : 0.8 }}
+                >
+                  <Icon name="block" size={14} /> Block
+                </button>
+                <button 
+                  className={`act-btn ok ${activeTx.status === 'cleared' ? 'active' : ''}`} 
+                  onClick={() => onAction("clear", activeTx)}
+                  style={{ opacity: activeTx.status === 'cleared' ? 1 : 0.8 }}
+                >
+                  <Icon name="check" size={14} /> Approve
+                </button>
+                <button 
+                  className={`act-btn warn ${activeTx.status === 'escalated' ? 'active' : ''}`} 
+                  onClick={() => onAction("escalate", activeTx)}
+                  style={{ opacity: activeTx.status === 'escalated' ? 1 : 0.8 }}
+                >
+                  <Icon name="escalate" size={14} /> Escalate
+                </button>
+                <button 
+                  className={`act-btn ${activeTx.status === 'false_positive' ? 'active' : ''}`} 
+                  onClick={() => onAction("false_positive", activeTx)}
+                  style={{ opacity: activeTx.status === 'false_positive' ? 1 : 0.8 }}
+                >
+                  <Icon name="flag" size={14} /> FP
+                </button>
+              </div>
+
+            </div>
           </div>
         </div>
       ) : (
@@ -617,7 +1181,7 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
         </div>
       )}
 
-      {/* 3. Right column: Dynamic panel */}
+      {/* 3. Right column: Dynamic panel (Larger width 420px) */}
       {activeTx ? (
         <div style={{ height: '100%', overflowY: 'auto', borderLeft: '1px solid var(--border)', paddingLeft: 12, display: 'grid', gridTemplateRows: 'auto 1fr', gap: 14 }}>
           {/* Quick tab filters at top */}

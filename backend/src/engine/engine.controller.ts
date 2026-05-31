@@ -57,6 +57,11 @@ export class EngineController {
     return this.engine.getHealth();
   }
 
+  @Get('map-token')
+  getMapToken() {
+    return { token: process.env.MAP || '' };
+  }
+
   @Post('decision')
   recordDecision(
     @Body()
@@ -70,5 +75,17 @@ export class EngineController {
     },
   ) {
     return this.engine.recordDecision(body);
+  }
+
+  @Post('chat')
+  async chat(
+    @Body()
+    body: {
+      tx: any;
+      history: { role: 'user' | 'model'; text: string }[];
+      message: string;
+    },
+  ) {
+    return this.engine.chatWithGemini(body.tx, body.history, body.message);
   }
 }

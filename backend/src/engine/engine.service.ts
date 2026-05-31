@@ -202,4 +202,108 @@ export class EngineService {
       });
     });
   }
+
+  async chatWithGemini(
+    tx: any,
+    history: any[],
+    message: string,
+  ): Promise<{ response: string }> {
+    const key = process.env.gemapikey || '';
+    if (!key) {
+      return { response: "Warning: Gemini API Key ('gemapikey') is not configured in backend environment." };
+    }
+
+    const systemPrompt = `You are Fraud Hunter Copilot, an expert fraud operations assistant.
+You are helping Lucas triage transaction ${tx.id}.
+Here is the transaction metadata:
+- ID: ${tx.id}
+- Card: ${tx.card}
+- Amount: $${tx.amount} (Median spend on card: $${tx.cardMedian})
+- Merchant: ${tx.merchant} (${tx.category})
+- Location: Cardholder country ${tx.country} vs Merchant country ${tx.merchantCountry}
+- Device: ${tx.device || 'N/A'}, IP: ${tx.ip || 'N/A'}
+- Time: ${tx.time}
+- Risk Score: ${(tx.score * 100).toFixed(0)}%
+- Triggered Signals:
+${tx.signals.map((s: any) => `  * ${s.name} (+${s.weight}): ${s.detail}`).join('\n')}
+
+Guidelines:
+1. Keep your answers relatively short, diagnostic, and direct.
+2. If the user asks about location, maps, card history, device/IP, or signals, briefly analyze it and explicitly instruct the user to view the corresponding tab in the right-hand panel (e.g. "I have loaded the map on the right. You can see the geographic route...", "Open the Card History panel to see cardholder baselines").
+3. DO NOT output long bulleted lists of transaction metadata. The analyst can see the card, amount, merchant, and signals on screen. Focus on analyzing the correlations.
+4. Give a clear decision recommendation: Approve, Block & Escalate, or Hold for Verification.
+5. Use markdown formatting (bold, italic, list items).`;
+
+    const contents: any[] = [];
+
+    // 1. Push system prompt as the first user message
+    contents.push({
+      role: 'user',
+      parts: [{ text: systemPrompt }]
+    });
+
+    let lastRole = 'user';
+
+    const mapRole = (roleStr: string) => {
+      const lr = (roleStr || '').toLowerCase();
+      if (lr === 'me' || lr === 'user') return 'user';
+      return 'model';
+    };
+
+    // Append history, ensuring alternating roles
+    if (Array.isArray(history)) {
+      history.forEach((h: any) => {
+        const currentRole = mapRole(h.role);
+        if (currentRole !== lastRole) {
+          contents.push({
+            role: currentRole,
+            parts: [{ text: h.text }]
+          });
+          lastRole = currentRole;
+        } else {
+          // If role is duplicate, append text to avoid Gemini API error
+          const lastContent = contents[contents.length - 1];
+          if (lastContent && lastContent.parts && lastContent.parts.length > 0) {
+            lastContent.parts[0].text += '\n\n' + h.text;
+          }
+        }
+      });
+    }
+
+    // Append new message
+    const nextRole = 'user';
+    if (nextRole !== lastRole) {
+      contents.push({
+        role: nextRole,
+        parts: [{ text: message }]
+      });
+    } else {
+      const lastContent = contents[contents.length - 1];
+      if (lastContent && lastContent.parts && lastContent.parts.length > 0) {
+        lastContent.parts[0].text += '\n\n' + message;
+      }
+    }
+
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+      const gFetch = (global as any).fetch;
+      const response = await gFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Gemini API error (${response.status}): ${errText}`);
+      }
+
+      const resData = await response.json();
+      const replyText = resData?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+      return { response: replyText };
+    } catch (e) {
+      console.error('Gemini API failed:', e);
+      return { response: `Error generating response: ${e.message}` };
+    }
+  }
 }
