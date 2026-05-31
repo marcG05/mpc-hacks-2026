@@ -7,3 +7,5 @@ export * from './Upload/Upload';
 export * from './DecisionLog/DecisionLog';
 export * from './Dashboard/Dashboard';
 export * from './ReviewQueue/ReviewQueue';
+export * from './Login/LoginView';
+

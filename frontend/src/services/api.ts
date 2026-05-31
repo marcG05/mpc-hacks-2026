@@ -124,4 +124,12 @@ export async function fetchChatResponse(payload: {
   });
 }
 
+export async function loginUser(payload: { username?: string; password?: string }): Promise<{ ok: boolean; user?: { username: string }; error?: string }> {
+  return request('/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
 

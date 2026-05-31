@@ -88,4 +88,21 @@ export class EngineController {
   ) {
     return this.engine.chatWithGemini(body.tx, body.history, body.message);
   }
+
+  @Post('login')
+  async login(@Body() body: { username?: string; password?: string }) {
+    return this.engine.login(body.username || '', body.password || '');
+  }
+
+  @Get('departments')
+  async getDepartments() {
+    const departments = await this.engine.getDepartments();
+    return { departments };
+  }
+
+  @Get('users')
+  async getUsers() {
+    const users = await this.engine.getUsers();
+    return { users };
+  }
 }

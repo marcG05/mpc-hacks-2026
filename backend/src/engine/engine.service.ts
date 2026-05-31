@@ -1,11 +1,77 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, OnModuleInit } from '@nestjs/common';
 import * as net from 'net';
+import * as sqlite3 from 'sqlite3';
+import * as path from 'path';
 
 @Injectable()
-export class EngineService {
+export class EngineService implements OnModuleInit {
   private transactions: any[] = [];
   private decisions: any[] = [];
   private metrics: any = { available: false };
+  private db: sqlite3.Database;
+
+  onModuleInit() {
+    const dbPath = path.join(process.cwd(), 'data.db');
+    this.db = new sqlite3.Database(dbPath, (err) => {
+      if (err) {
+        console.error('Error opening SQLite database:', err);
+      } else {
+        console.log('Connected to SQLite database at:', dbPath);
+        this.initDatabase();
+      }
+    });
+  }
+
+  private initDatabase() {
+    this.db.serialize(() => {
+      // 1. Decisions table
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS decisions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          time TEXT,
+          tx TEXT,
+          card TEXT,
+          action TEXT,
+          score REAL,
+          by TEXT
+        )
+      `);
+
+      // 2. Users table
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE,
+          password TEXT
+        )
+      `, () => {
+        // Seed user Marc / 1234
+        this.db.run(
+          `INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)`,
+          ['Marc', '1234']
+        );
+      });
+
+      // 3. Departments table
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS departments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE
+        )
+      `, () => {
+        // Seed departments
+        const depts = [
+          'Payments Compliance',
+          'Chargeback Operations',
+          'Identity Verification Desk',
+          'Security Engineering'
+        ];
+        depts.forEach((d) => {
+          this.db.run(`INSERT OR IGNORE INTO departments (name) VALUES (?)`, [d]);
+        });
+      });
+    });
+  }
 
   getHello(): string {
     return 'Hello World';
@@ -144,17 +210,28 @@ export class EngineService {
     return this.transactions;
   }
 
-  getDecisions() {
-    if (this.decisions.length < 1) {
-      throw new NotFoundException("Decisions not found");
-    }
-    return this.decisions;
+  async getDecisions(): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      this.db.all('SELECT * FROM decisions ORDER BY id DESC', [], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
   }
 
-  getSummary() {
+  async getSummary() {
+    const dbDecisionsCount = await new Promise<number>((resolve) => {
+      this.db.get('SELECT COUNT(*) as count FROM decisions', [], (err, row) => {
+        resolve(row ? (row as any).count : 0);
+      });
+    });
+
     return {
       totalTransactions: this.transactions.length,
-      totalDecisions: this.decisions.length,
+      totalDecisions: dbDecisionsCount,
       atRisk: this.transactions.filter(t => t.status === 'flagged' || t.status === 'review').reduce((sum, t) => sum + (t.amount || 0), 0),
     };
   }
@@ -163,21 +240,76 @@ export class EngineService {
     return this.metrics ?? { available: false };
   }
 
-  recordDecision(decision: any) {
+  async recordDecision(decision: any): Promise<any> {
     const entry = {
       ...decision,
       time: decision.time || new Date().toISOString(),
     };
     this.decisions.unshift(entry);
 
-    // Update the local transaction status if it exists
-    const txIndex = this.transactions.findIndex(t => t.id === decision.tx);
-    if (txIndex !== -1) {
-      const statusMap: Record<string, string> = { block: "blocked", clear: "cleared", escalate: "escalated", false_positive: "false_positive" };
-      this.transactions[txIndex].status = statusMap[decision.action] || decision.action;
-    }
+    // Save to SQLite database
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `INSERT INTO decisions (time, tx, card, action, score, by) VALUES (?, ?, ?, ?, ?, ?)`,
+        [entry.time, entry.tx, entry.card, entry.action, entry.score || 0, entry.by || ''],
+        (err) => {
+          if (err) {
+            console.error('Error inserting decision into SQLite:', err);
+            reject(err);
+          } else {
+            // Update the local transaction status if it exists
+            const txIndex = this.transactions.findIndex(t => t.id === decision.tx);
+            if (txIndex !== -1) {
+              const statusMap: Record<string, string> = { block: "blocked", clear: "cleared", escalate: "escalated", false_positive: "false_positive" };
+              this.transactions[txIndex].status = statusMap[decision.action] || decision.action;
+            }
+            resolve({ ok: true, decision: entry });
+          }
+        }
+      );
+    });
+  }
 
-    return { ok: true, decision: entry };
+  async login(username: string, password: string): Promise<{ ok: boolean; user?: { username: string }; error?: string }> {
+    return new Promise((resolve) => {
+      this.db.get(
+        'SELECT * FROM users WHERE username = ? AND password = ?',
+        [username, password],
+        (err, row) => {
+          if (err) {
+            resolve({ ok: false, error: 'Database error' });
+          } else if (row) {
+            resolve({ ok: true, user: { username: (row as any).username } });
+          } else {
+            resolve({ ok: false, error: 'Invalid credentials' });
+          }
+        }
+      );
+    });
+  }
+
+  async getDepartments(): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+      this.db.all('SELECT name FROM departments', [], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows.map((r: any) => r.name));
+        }
+      });
+    });
+  }
+
+  async getUsers(): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+      this.db.all('SELECT username FROM users', [], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows.map((r: any) => r.username));
+        }
+      });
+    });
   }
 
   async getHealth(): Promise<{ status: string; engine: string }> {

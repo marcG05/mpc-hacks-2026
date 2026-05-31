@@ -47,7 +47,11 @@ const DEFAULT_CONFIG_FALLBACK = {
   }
 };
 
-export function Settings() {
+interface SettingsProps {
+  currentUser?: { username: string } | null;
+}
+
+export function Settings({ currentUser }: SettingsProps = {}) {
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'engine'>('engine');
   
   // Config state
@@ -59,13 +63,26 @@ export function Settings() {
 
   // Profile fields simulator
   const [profile, setProfile] = useState({
-    name: 'Lucas Matkovski',
-    role: 'Senior Fraud Analyst',
-    email: 'lucas.m@hunter.org',
+    name: currentUser?.username || 'Lucas Matkovski',
+    role: currentUser?.username === 'Marc' ? 'Lead Investigator' : 'Senior Fraud Analyst',
+    email: currentUser?.username === 'Marc' ? 'marc@hunter.org' : 'lucas.m@hunter.org',
     notifInstant: true,
     notifDaily: false,
     density: 'cozy'
   });
+
+  // Sync profile if currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      setProfile(prev => ({
+        ...prev,
+        name: currentUser.username,
+        role: currentUser.username === 'Marc' ? 'Lead Investigator' : 'Senior Fraud Analyst',
+        email: currentUser.username === 'Marc' ? 'marc@hunter.org' : 'lucas.m@hunter.org',
+      }));
+    }
+  }, [currentUser]);
+
 
   // Load config on mount
   useEffect(() => {

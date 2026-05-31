@@ -7,7 +7,8 @@ import {
   AIHub, 
   Resources, 
   Settings, 
-  Upload 
+  Upload,
+  LoginView
 } from './views';
 import type { Transaction, LogEntry, Metrics } from './types';
 import { 
@@ -16,7 +17,7 @@ import {
   fetchDecisions, 
   fetchMetrics, 
   recordDecision, 
-  fetchHealth 
+  fetchHealth
 } from './services/api';
 import './styles.css';
 
@@ -40,6 +41,14 @@ const ACTION_META: Record<string, { label: string; icon: string; c: string }> = 
 };
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<{ username: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem('fh_current_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [route, setRoute] = useState('dashboard');
   const [txns, setTxns] = useState<Transaction[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -60,6 +69,12 @@ export default function App() {
     }
   });
   const [engineStatus, setEngineStatus] = useState<'online' | 'offline' | 'checking'>('checking');
+
+  const handleLogout = () => {
+    localStorage.removeItem('fh_current_user');
+    setCurrentUser(null);
+    showToast('Logged out successfully', 'check', 'var(--low)');
+  };
 
   // Monitor engine microservice health
   useEffect(() => {
@@ -138,7 +153,7 @@ export default function App() {
       card: tx.card,
       action,
       score: tx.score,
-      by: 'Lucas Matkovski',
+      by: currentUser?.username || 'Lucas Matkovski',
     };
 
     showToast(`${tx.id} — ${ACTION_META[action]?.label ?? 'Updated'}`, ACTION_META[action]?.icon ?? 'check', ACTION_META[action]?.c ?? 'var(--low)');
@@ -166,6 +181,24 @@ export default function App() {
       showToast('Upload failed', 'block', 'var(--critical)');
     }
   };
+
+  if (!currentUser) {
+    return (
+      <>
+        <LoginView onLoginSuccess={(u) => {
+          setCurrentUser(u);
+          localStorage.setItem('fh_current_user', JSON.stringify(u));
+          showToast('Welcome back, ' + u.username, 'check', 'var(--low)');
+        }} />
+        {toast && (
+          <div className={'toast show'} style={{ zIndex: 100000 }}>
+            <Icon name={toast.icon} size={16} style={{ color: toast.color }} />
+            <span>{toast.msg}</span>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <div className={'app' + (collapsed ? ' collapsed' : '')}>
@@ -205,8 +238,19 @@ export default function App() {
           </div>
         ))}
         
+        {/* Logout action */}
+        <div 
+          className="nav-item" 
+          onClick={handleLogout}
+          style={{ marginTop: 'auto', color: 'var(--critical)', cursor: 'pointer' }}
+          title={collapsed ? "Logout" : undefined}
+        >
+          <Icon name="block" size={17} style={{ color: 'var(--critical)' }} />
+          <span>Logout</span>
+        </div>
+
         {/* Engine online healthcard */}
-        <div style={{ marginTop: 'auto' }} className="engine-card">
+        <div className="engine-card" style={{ marginTop: 8 }}>
           <div className="card" style={{ padding: 13, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
             <div className="flex" style={{ alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <span className="dot" style={{ width: 7, height: 7, borderRadius: 99, background: engineStatus === 'online' ? 'var(--low)' : engineStatus === 'checking' ? 'var(--accent)' : 'var(--critical)', boxShadow: `0 0 8px ${engineStatus === 'online' ? 'var(--low)' : engineStatus === 'checking' ? 'var(--accent)' : 'var(--critical)'}` }}></span>
@@ -242,8 +286,8 @@ export default function App() {
               {openQueue > 0 && <span className="notif-dot">{openQueue > 9 ? '9+' : openQueue}</span>}
             </div>
             <div className="user-chip" onClick={() => handleNavigate('settings')} style={{ cursor: 'pointer' }}>
-              <span className="user-name">Lucas Matkovski</span>
-              <div className="avatar">LM</div>
+              <span className="user-name">{currentUser.username}</span>
+              <div className="avatar">{currentUser.username.substring(0, 2).toUpperCase()}</div>
             </div>
           </div>
         </header>
@@ -268,13 +312,14 @@ export default function App() {
             txns={txns} 
             initialSelectedTx={selectedTxContext} 
             onAction={applyAction} 
+            currentUser={currentUser}
           />
         )}
         {route === 'resources' && (
           <Resources />
         )}
         {route === 'settings' && (
-          <Settings />
+          <Settings currentUser={currentUser} />
         )}
       </div>
 

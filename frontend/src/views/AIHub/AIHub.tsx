@@ -556,6 +556,7 @@ interface AIHubProps {
   txns: Transaction[];
   initialSelectedTx?: Transaction | null;
   onAction: (action: string, tx: Transaction) => void;
+  currentUser?: { username: string } | null;
 }
 
 type TabKey = 'amount' | 'location' | 'device' | 'card' | 'signals' | 'time';
@@ -584,7 +585,7 @@ function getCountryCoord(code: string) {
   return COUNTRY_COORDS[code.toUpperCase()] || { x: 250, y: 70, name: code };
 }
 
-export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
+export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubProps) {
   // 1. Filter queue for transactions that are flagged or in review
   const triageQueue = useMemo(() => {
     return txns.filter(t => t.status === 'flagged' || t.status === 'review');
@@ -633,7 +634,7 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
 
   const [escalatedReports, setEscalatedReports] = useState<EscalatedReport[]>(() => {
     try {
-      const saved = localStorage.getItem('escalated_reports');
+      const saved = sessionStorage.getItem('escalated_reports');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -642,7 +643,7 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
 
   useEffect(() => {
     try {
-      localStorage.setItem('escalated_reports', JSON.stringify(escalatedReports));
+      sessionStorage.setItem('escalated_reports', JSON.stringify(escalatedReports));
     } catch (e) {
       console.error(e);
     }
@@ -676,6 +677,277 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
     setIsEscalationFormOpen(false);
     setSidebarTab('escalated');
     onAction("escalate", activeTx);
+  };
+
+  const handleDownloadPDF = (report: EscalatedReport) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    // Try to find the associated transaction metadata
+    const tx = txns.find(t => t.id === report.txId);
+    
+    const signalsHtml = tx && tx.signals && tx.signals.length > 0 
+      ? tx.signals.map(s => `<li class="signal-item"><strong>${s.name}</strong>: ${s.detail}</li>`).join('')
+      : '<li class="signal-item">No automated rule signals fired. Classification based on anomaly ensemble.</li>';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Escalation Case File - ${report.txId}</title>
+          <style>
+            @media print {
+              body {
+                background: #fff;
+                color: #000;
+                padding: 0;
+              }
+              .page-container {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+              }
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              color: #1a202c;
+              padding: 40px;
+              line-height: 1.5;
+              background-color: #f7fafc;
+            }
+            .page-container {
+              max-width: 800px;
+              margin: 0 auto;
+              background: #fff;
+              border: 1px solid #e2e8f0;
+              border-radius: 8px;
+              box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+              padding: 50px;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 3px solid #3182ce;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
+            }
+            .title-area h1 {
+              font-size: 24px;
+              font-weight: 800;
+              margin: 0;
+              color: #2b6cb0;
+              letter-spacing: -0.02em;
+            }
+            .title-area p {
+              font-size: 13px;
+              color: #718096;
+              margin: 4px 0 0 0;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            }
+            .logo-placeholder {
+              background: #3182ce;
+              color: #fff;
+              font-weight: 800;
+              padding: 10px 14px;
+              border-radius: 6px;
+              font-size: 14px;
+              text-transform: uppercase;
+            }
+            .section {
+              margin-bottom: 30px;
+            }
+            .section-title {
+              font-size: 15px;
+              font-weight: 700;
+              color: #2d3748;
+              border-bottom: 1px solid #e2e8f0;
+              padding-bottom: 6px;
+              margin-bottom: 16px;
+              text-transform: uppercase;
+              letter-spacing: 0.02em;
+            }
+            .grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 16px;
+            }
+            .meta-card {
+              background: #f8fafc;
+              border: 1px solid #edf2f7;
+              border-radius: 6px;
+              padding: 12px 16px;
+            }
+            .meta-label {
+              font-size: 10px;
+              text-transform: uppercase;
+              color: #718096;
+              font-weight: 700;
+              margin-bottom: 2px;
+            }
+            .meta-value {
+              font-size: 14px;
+              color: #1a202c;
+              font-weight: 600;
+            }
+            .mono {
+              font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+            }
+            .notes-box {
+              background-color: #f7fafc;
+              border-left: 4px solid #dd6b20;
+              border-radius: 0 6px 6px 0;
+              padding: 18px;
+              font-size: 13px;
+              color: #2d3748;
+              line-height: 1.6;
+              white-space: pre-wrap;
+            }
+            .badge {
+              display: inline-block;
+              padding: 3px 8px;
+              font-size: 10px;
+              font-weight: 700;
+              border-radius: 4px;
+              text-transform: uppercase;
+            }
+            .badge-warn {
+              background-color: #feebc8;
+              color: #c05621;
+              border: 1px solid #fbd38d;
+            }
+            .badge-critical {
+              background-color: #fed7d7;
+              color: #9b2c2c;
+              border: 1px solid #feb2b2;
+            }
+            .signal-list {
+              padding-left: 20px;
+              margin: 0;
+            }
+            .signal-item {
+              font-size: 12.5px;
+              color: #4a5568;
+              margin-bottom: 6px;
+            }
+            .footer {
+              margin-top: 50px;
+              border-top: 1px solid #edf2f7;
+              padding-top: 20px;
+              font-size: 11px;
+              color: #a0aec0;
+              text-align: center;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="page-container">
+            <div class="header">
+              <div class="title-area">
+                <h1>Escalation Case File</h1>
+                <p>Fraud Hunter Operations Gateway</p>
+              </div>
+              <div class="logo-placeholder">FH Risk Ops</div>
+            </div>
+
+            <div class="section">
+              <h2 class="section-title">Case Metadata</h2>
+              <div class="grid">
+                <div class="meta-card">
+                  <div class="meta-label">Incident ID</div>
+                  <div class="meta-value mono">${report.txId}</div>
+                </div>
+                <div class="meta-card">
+                  <div class="meta-label">Escalated Value</div>
+                  <div class="meta-value" style="color: #e53e3e; font-size: 16px; font-weight: 800;">$${report.amount.toFixed(2)}</div>
+                </div>
+                <div class="meta-card">
+                  <div class="meta-label">Target Dispatch Unit</div>
+                  <div class="meta-value">${report.department}</div>
+                </div>
+                <div class="meta-card">
+                  <div class="meta-label">Assigned Escalation Lead</div>
+                  <div class="meta-value">${report.assignee}</div>
+                </div>
+                <div class="meta-card">
+                  <div class="meta-label">Incident Classification</div>
+                  <div class="meta-value">
+                    <span class="badge ${report.unableToDetermine ? 'badge-critical' : 'badge-warn'}">
+                      ${report.unableToDetermine ? 'L2 Urgent Action Blocked' : 'Analyst Standard Escalation'}
+                    </span>
+                  </div>
+                </div>
+                <div class="meta-card">
+                  <div class="meta-label">Dispatch Timestamp</div>
+                  <div class="meta-value">${report.timestamp}</div>
+                </div>
+              </div>
+            </div>
+
+            ${tx ? `
+            <div class="section">
+              <h2 class="section-title">Forensic Transaction Details</h2>
+              <div class="grid">
+                <div class="meta-card">
+                  <div class="meta-label">Associated Card ID</div>
+                  <div class="meta-value mono">${tx.card}</div>
+                </div>
+                <div class="meta-card">
+                  <div class="meta-label">Cardholder Identity</div>
+                  <div class="meta-value">${tx.customer}</div>
+                </div>
+                <div class="meta-card">
+                  <div class="meta-label">Merchant & Category</div>
+                  <div class="meta-value">${tx.merchant} (${tx.category})</div>
+                </div>
+                <div class="meta-card">
+                  <div class="meta-label">Transaction Channel</div>
+                  <div class="meta-value">${tx.channel}</div>
+                </div>
+                <div class="meta-card">
+                  <div class="meta-label">Geographic Route</div>
+                  <div class="meta-value">${tx.country} (Cardholder) ➔ ${tx.merchantCountry} (Merchant)</div>
+                </div>
+                <div class="meta-card">
+                  <div class="meta-label">Device & IP Fingerprint</div>
+                  <div class="meta-value text-sm mono">Device: ${tx.device || 'N/A'} <br/> IP: ${tx.ip || 'N/A'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section">
+              <h2 class="section-title">Fired Rules & Signals</h2>
+              <ul class="signal-list">
+                ${signalsHtml}
+              </ul>
+            </div>
+            ` : ''}
+
+            <div class="section">
+              <h2 class="section-title">Analyst Diagnosis Insights & Notes</h2>
+              <div class="notes-box">${report.notes || 'No investigator insights attached.'}</div>
+            </div>
+
+            <div class="footer">
+              CONFIDENTIAL DOCUMENT - SECURITY AND FRAUD INVESTIGATION PURPOSES ONLY.<br/>
+              Generated automatically by Fraud Hunter Gateway at ${new Date().toLocaleString()}.
+            </div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
 
   // Keyboard Shortcuts (Alt + Shift + A/B/E)
@@ -715,15 +987,16 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
   // Initialize/Reset chat when transaction changes
   useEffect(() => {
     if (!activeTx) return;
+    const name = currentUser?.username || 'Lucas';
     setMsgs([
       {
         role: 'ai',
-        text: `Hi Lucas. I've initiated analysis on transaction **${activeTx.id}**. \n\nYou can select the metadata fields in the top context card or ask me to open specific diagnostic panels to begin triage.`
+        text: `Hi ${name}. I've initiated analysis on transaction **${activeTx.id}**. \n\nYou can select the metadata fields in the top context card or ask me to open specific diagnostic panels to begin triage.`
       }
     ]);
     setActiveTab('signals');
     setExpandedSignalKey(null);
-  }, [activeTx?.id]);
+  }, [activeTx?.id, currentUser]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -1905,12 +2178,20 @@ export function AIHub({ txns, initialSelectedTx, onAction }: AIHubProps) {
               borderTop: '1px solid var(--border)',
               display: 'flex',
               justifyContent: 'flex-end',
-              background: 'var(--surface-2)'
+              background: 'var(--surface-2)',
+              gap: 10
             }}>
+              <button 
+                onClick={() => handleDownloadPDF(viewingReport)}
+                className="btn btn-ghost btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-hi)', cursor: 'pointer' }}
+              >
+                <Icon name="note" size={14} /> Download PDF
+              </button>
               <button 
                 onClick={() => setViewingReport(null)}
                 className="btn btn-primary btn-sm"
-                style={{ background: 'var(--accent)', borderColor: 'var(--accent-line)', color: '#fff' }}
+                style={{ background: 'var(--accent)', borderColor: 'var(--accent-line)', color: '#fff', cursor: 'pointer' }}
               >
                 Close Report
               </button>
