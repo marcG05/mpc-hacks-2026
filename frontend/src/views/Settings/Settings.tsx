@@ -209,7 +209,7 @@ export function Settings({ currentUser }: SettingsProps = {}) {
 
   if (loading) {
     return (
-      <div className="content flex" style={{ height: 'calc(100vh - 60px)', placeItems: 'center', justifyContent: 'center' }}>
+      <div className="content flex" style={{ height: '100vh', placeItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', color: 'var(--text-3)' }}>
           <Icon name="refresh" size={32} className="spin" style={{ marginBottom: 8 }} />
           <div>Connecting to Engine Tuner server...</div>
@@ -219,7 +219,7 @@ export function Settings({ currentUser }: SettingsProps = {}) {
   }
 
   return (
-    <div className="content fade-in" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 60px)', paddingBottom: 40 }}>
+    <div className="content fade-in" style={{ overflowY: 'auto', maxHeight: '100vh', paddingBottom: 40 }}>
       {/* Page Header */}
       <div className="page-head flex between" style={{ marginBottom: 20 }}>
         <div>

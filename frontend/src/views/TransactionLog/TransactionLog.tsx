@@ -140,7 +140,7 @@ export function TransactionLog({ txns, onSelect }: TransactionLogProps) {
   };
 
   return (
-    <div className="content fade-in" style={{ height: 'calc(100vh - 60px)', display: 'grid', gridTemplateRows: 'auto 1fr', paddingBottom: 0 }}>
+    <div className="content fade-in" style={{ height: '100vh', display: 'grid', gridTemplateRows: 'auto 1fr', paddingBottom: 0 }}>
       {/* Page Header */}
       <div className="page-head flex between" style={{ paddingBottom: 12 }}>
         <div>

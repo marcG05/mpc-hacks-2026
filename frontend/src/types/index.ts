@@ -20,6 +20,7 @@ export interface Transaction {
   device: string;
   ip: string;
   time: string;
+  timestamp?: string;
   score: number;
   type: string;
   status: 'flagged' | 'review' | 'blocked' | 'cleared' | 'escalated' | 'false_positive';

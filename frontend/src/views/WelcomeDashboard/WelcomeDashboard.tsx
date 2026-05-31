@@ -23,10 +23,10 @@ export function WelcomeDashboard({ txns, metrics, onNavigate, onImportClick }: W
   }, [metrics]);
 
   return (
-    <div className="content fade-in" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 60px)', padding: '24px 32px 40px 32px' }}>
+    <div className="content fade-in" style={{ overflowY: 'auto', maxHeight: '100vh', padding: '24px 32px 40px 32px' }}>
       
       {/* Welcome Landing / Hero Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 40, alignItems: 'center', minHeight: 'calc(100vh - 160px)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 40, alignItems: 'center', minHeight: 'calc(100vh - 100px)' }}>
         
         {/* Left Column: Welcome, Prominent Start Action & Key Stats */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -38,7 +38,7 @@ export function WelcomeDashboard({ txns, metrics, onNavigate, onImportClick }: W
               lineHeight: 1.15,
               margin: '0 0 12px 0', 
               letterSpacing: '-0.03em', 
-              background: 'linear-gradient(135deg, #ffffff 0%, #a78bfa 100%)', 
+              background: 'linear-gradient(135deg, var(--text) 0%, var(--violet) 100%)', 
               WebkitBackgroundClip: 'text', 
               WebkitTextFillColor: 'transparent' 
             }}>
@@ -48,17 +48,17 @@ export function WelcomeDashboard({ txns, metrics, onNavigate, onImportClick }: W
               An interpretable real-time fraud operations workspace. Blending 15 independent rule weights with Isolation Forest safety nets to catch anomalies.
             </p>
           </div>
-
+ 
           {/* Onboarding & Input Option: Large Prominent Call to Action */}
           <div className="card" style={{ 
             padding: 24, 
-            background: 'linear-gradient(145deg, var(--surface) 0%, var(--surface-2) 100%)', 
+            background: 'var(--surface)', 
             border: '1px solid var(--border-hi)', 
-            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
+            boxShadow: 'var(--shadow-lg)',
             borderRadius: 'var(--radius-lg)'
           }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 16, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Icon name="upload" size={16} style={{ color: 'var(--accent-hi)' }} />
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 16, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="upload" size={16} style={{ color: 'var(--accent)' }} />
               Upload Transaction Log
             </h3>
             <p style={{ margin: '0 0 20px 0', fontSize: 13, color: 'var(--text-3)', lineHeight: 1.45 }}>
@@ -73,10 +73,10 @@ export function WelcomeDashboard({ txns, metrics, onNavigate, onImportClick }: W
                   padding: '12px 20px', 
                   fontSize: 13.5, 
                   fontWeight: 600,
-                  background: 'linear-gradient(135deg, var(--accent) 0%, #3bb6c4 100%)',
+                  background: 'linear-gradient(135deg, var(--accent) 0%, var(--teal) 100%)',
                   border: 0,
                   borderRadius: 'var(--radius)',
-                  boxShadow: '0 4px 14px rgba(77,139,240,0.3)',
+                  boxShadow: '0 4px 14px rgba(37,99,235,0.2)',
                   cursor: 'pointer'
                 }}
               >
@@ -193,9 +193,9 @@ export function WelcomeDashboard({ txns, metrics, onNavigate, onImportClick }: W
               left: 16, 
               right: 16,
               padding: '12px 16px',
-              background: 'rgba(12, 20, 36, 0.7)',
+              background: 'rgba(255, 255, 255, 0.75)',
               backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
+              border: '1px solid var(--border)',
               borderRadius: 'var(--radius)',
               display: 'flex',
               alignItems: 'center',
@@ -203,7 +203,7 @@ export function WelcomeDashboard({ txns, metrics, onNavigate, onImportClick }: W
               gap: 12
             }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>Streaming Engine v1.0.4</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>Streaming Engine v1.0.4</div>
                 <div style={{ fontSize: 10, color: 'var(--text-3)' }}>TCP Socket Mode · Auditable</div>
               </div>
               <div className="flex" style={{ marginLeft: 'auto', alignItems: 'center', gap: 6 }}>

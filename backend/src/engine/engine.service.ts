@@ -122,15 +122,72 @@ export class EngineService implements OnModuleInit {
                     let icon = 'flag';
                     let color = 'high';
                     
-                    if (p.includes('Amount')) { name = 'Amount Anomaly'; icon = 'trend'; color = 'critical'; }
-                    else if (p.includes('Cross-border')) { name = 'Geographic Mismatch'; icon = 'globe'; }
-                    else if (p.includes('other txns') || p.includes('Burst') || p.includes('Velocity')) { name = 'Velocity Spike'; icon = 'bolt'; color = 'critical'; }
-                    else if (p.includes('High-risk category')) { name = 'High-risk Category'; icon = 'tag'; }
-                    else if (p.includes('spree')) { name = 'Targeted Spree'; icon = 'shopping-bag'; color = 'critical'; }
-                    else if (p.includes('Device')) { name = 'Device Reuse'; icon = 'device'; color = 'critical'; }
-                    else if (p.includes('IP ')) { name = 'Shared IP Address'; icon = 'network'; color = 'critical'; }
-                    else if (p.includes('Test-charge') || p.includes('Round amount') || p.includes('merchants')) { name = 'Card-Testing Pattern'; icon = 'probe'; color = 'critical'; }
-                    else if (p.includes('night window') || p.includes('unusual_hour')) { name = 'Off-hours Activity'; icon = 'clock'; }
+                    const lowerP = p.toLowerCase();
+                    if (lowerP.includes('amount') || lowerP.includes('spending') || lowerP.includes('zscore') || lowerP.includes('deviation')) {
+                      name = 'Amount Anomaly';
+                      icon = 'trend';
+                      color = 'critical';
+                    }
+                    else if (lowerP.includes('cross-border') || lowerP.includes('cross border') || lowerP.includes('was made in')) {
+                      name = 'Geographic Mismatch';
+                      icon = 'globe';
+                      color = 'high';
+                    }
+                    else if (lowerP.includes('other transaction') || lowerP.includes('velocity') || lowerP.includes('burst') || lowerP.includes('quick succession')) {
+                      name = 'Velocity Spike';
+                      icon = 'bolt';
+                      color = 'critical';
+                    }
+                    else if (lowerP.includes('higher-risk category') || lowerP.includes('high-risk category') || lowerP.includes('merchant category')) {
+                      name = 'High-risk Category';
+                      icon = 'tag';
+                      color = 'high';
+                    }
+                    else if (lowerP.includes('gift card')) {
+                      name = 'Gift Card Spree';
+                      icon = 'shopping-bag';
+                      color = 'critical';
+                    }
+                    else if (lowerP.includes('electronics')) {
+                      name = 'Electronics Spree';
+                      icon = 'shopping-bag';
+                      color = 'critical';
+                    }
+                    else if (lowerP.includes('spree')) {
+                      name = 'Targeted Spree';
+                      icon = 'shopping-bag';
+                      color = 'critical';
+                    }
+                    else if (lowerP.includes('device')) {
+                      name = 'Device Reuse';
+                      icon = 'device';
+                      color = 'critical';
+                    }
+                    else if (lowerP.includes('ip address') || lowerP.includes('ip ')) {
+                      name = 'Shared IP Address';
+                      icon = 'network';
+                      color = 'critical';
+                    }
+                    else if (lowerP.includes('card-testing') || lowerP.includes('card testing') || lowerP.includes('test charge') || lowerP.includes('test-charge')) {
+                      name = 'Card-Testing Pattern';
+                      icon = 'probe';
+                      color = 'critical';
+                    }
+                    else if (lowerP.includes('round value') || lowerP.includes('round amount') || lowerP.includes('exact round')) {
+                      name = 'Round Amount';
+                      icon = 'hash';
+                      color = 'low';
+                    }
+                    else if (lowerP.includes('merchants') || lowerP.includes('large number of different')) {
+                      name = 'Many Merchants';
+                      icon = 'shopping-bag';
+                      color = 'high';
+                    }
+                    else if (lowerP.includes('night') || lowerP.includes('overnight') || lowerP.includes('unusual_hour') || lowerP.includes('off-hours')) {
+                      name = 'Off-hours Activity';
+                      icon = 'clock';
+                      color = 'medium';
+                    }
 
                     signals.push({ key: `sig-${i}`, name, detail: p, weight: 1, color, icon });
                   });
@@ -160,6 +217,7 @@ export class EngineService implements OnModuleInit {
                   device: r.device_id || '',
                   ip: r.ip_address || '',
                   time: timeStr,
+                  timestamp: r.timestamp || '',
                   score: r.fraud_score || 0,
                   type: 'anomaly',
                   status: status,
@@ -335,6 +393,35 @@ export class EngineService implements OnModuleInit {
     });
   }
 
+  private async searchWikipedia(query: string): Promise<{ title: string; snippet: string; url: string }[]> {
+    try {
+      const q = encodeURIComponent(query.trim());
+      const url = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${q}&limit=3&namespace=0&format=json`;
+      const response = await fetch(url);
+      if (!response.ok) return [];
+      const data = await response.json();
+      if (Array.isArray(data) && data.length >= 4) {
+        const titles = data[1] || [];
+        const snippets = data[2] || [];
+        const urls = data[3] || [];
+        const results: { title: string; snippet: string; url: string }[] = [];
+        for (let i = 0; i < titles.length; i++) {
+          if (titles[i] && urls[i]) {
+            results.push({
+              title: titles[i],
+              snippet: snippets[i] || '',
+              url: urls[i]
+            });
+          }
+        }
+        return results;
+      }
+    } catch (e) {
+      console.error('Wikipedia search failed:', e);
+    }
+    return [];
+  }
+
   async chatWithGemini(
     tx: any,
     history: any[],
@@ -343,6 +430,47 @@ export class EngineService implements OnModuleInit {
     const key = process.env.gemapikey || '';
     if (!key) {
       return { response: "Warning: Gemini API Key ('gemapikey') is not configured in backend environment." };
+    }
+
+    let searchResults: { title: string; snippet: string; url: string }[] = [];
+    const lowerMsg = message.toLowerCase();
+    
+    const searchKeywords = [
+      /search(?: for)?\s+([^?.]+)/,
+      /look(?:up| up)\s+([^?.]+)/,
+      /find (?:info|information|resources|guides?|manuals?|references?|docs?|documentation) (?:on|about)?\s+([^?.]+)/,
+      /what is\s+([^?.]+)/,
+      /how does\s+([^?.]+)\s+work/
+    ];
+    
+    let queryToSearch = '';
+    for (const pattern of searchKeywords) {
+      const match = lowerMsg.match(pattern);
+      if (match && match[1]) {
+        queryToSearch = match[1].trim();
+        break;
+      }
+    }
+
+    if (!queryToSearch && (lowerMsg.includes('isolation forest') || lowerMsg.includes('anomaly') || lowerMsg.includes('vpn') || lowerMsg.includes('compliance') || lowerMsg.includes('fatf'))) {
+      if (lowerMsg.includes('isolation forest')) queryToSearch = 'Isolation Forest';
+      else if (lowerMsg.includes('vpn') || lowerMsg.includes('proxy')) queryToSearch = 'Proxy server';
+      else if (lowerMsg.includes('fatf')) queryToSearch = 'Financial Action Task Force';
+      else if (lowerMsg.includes('pci')) queryToSearch = 'PCI DSS';
+    }
+
+    if (queryToSearch) {
+      console.log(`[Copilot Search] Executing Wikipedia search for: "${queryToSearch}"`);
+      searchResults = await this.searchWikipedia(queryToSearch);
+    }
+
+    let resourceContext = '';
+    if (searchResults.length > 0) {
+      resourceContext = `\n\n--- DYNAMIC SEARCH RESULTS FOR "${queryToSearch.toUpperCase()}" ---\n` +
+        searchResults.map((r, i) => `[Resource ${i+1}] Title: ${r.title}\nURL: ${r.url}\nSummary: ${r.snippet}`).join('\n\n') +
+        `\n\nGuidelines for Resources:\n` +
+        `- Summarize key points from these search results if they answer the user's question.\n` +
+        `- You MUST output links to these resources using the exact markdown format: [Title](URL) (e.g. [Wikipedia: Isolation Forest](${searchResults[0]?.url})). Do not modify the URLs.\n`;
     }
 
     const systemPrompt = `You are Falcon Copilot, an expert fraud operations assistant.
@@ -364,7 +492,8 @@ Guidelines:
 2. If the user asks about location, maps, card history, device/IP, or signals, briefly analyze it and explicitly instruct the user to view the corresponding tab in the right-hand panel (e.g. "I have loaded the map on the right. You can see the geographic route...", "Open the Card History panel to see cardholder baselines").
 3. DO NOT output long bulleted lists of transaction metadata. The analyst can see the card, amount, merchant, and signals on screen. Focus on analyzing the correlations.
 4. Give a clear decision recommendation: Approve, Block & Escalate, or Hold for Verification.
-5. Use markdown formatting (bold, italic, list items).`;
+5. Use markdown formatting (bold, italic, list items).
+${resourceContext}`;
 
     const contents: any[] = [];
 

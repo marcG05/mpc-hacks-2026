@@ -58,7 +58,6 @@ export default function App() {
   const [importOpen, setImportOpen] = useState(false);
   
   const [toast, setToast] = useState<{ msg: string; icon: string; color: string } | null>(null);
-  const [updated] = useState(nowTime());
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem('fh_collapsed') === '1';
@@ -201,7 +200,7 @@ export default function App() {
   return (
     <div className={'app' + (collapsed ? ' collapsed' : '')}>
       <aside className={'sidebar' + (collapsed ? ' collapsed' : '')}>
-        <div className="brand" onClick={() => handleNavigate('dashboard')} style={{ cursor: 'pointer' }}>
+        <div className="brand" onClick={toggleCollapsed} style={{ cursor: 'pointer' }} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
           <div className="brand-mark"><Icon name="shield" size={18} style={{ color: '#fff' }} /></div>
           <div className="brand-text">
             <div className="brand-name" style={{ letterSpacing: '-0.02em' }}>Falcon</div>
@@ -234,6 +233,34 @@ export default function App() {
           <span>Logout</span>
         </div>
 
+        {/* Notifications */}
+        <div 
+          className="nav-item" 
+          onClick={() => handleNavigate('hub')}
+          style={{ cursor: 'pointer' }}
+          title={collapsed ? `Notifications (${openQueue})` : undefined}
+        >
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Icon name="bell" size={17} />
+            {openQueue > 0 && <span className="notif-dot" style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, fontSize: 8, border: '1px solid var(--surface-2)' }}>{openQueue}</span>}
+          </div>
+          <span>Notifications</span>
+          {openQueue > 0 && !collapsed && <span className="count">{openQueue}</span>}
+        </div>
+
+        {/* User profile details */}
+        <div 
+          className="nav-item" 
+          onClick={() => handleNavigate('settings')}
+          style={{ cursor: 'pointer' }} 
+          title={collapsed ? currentUser.username : undefined}
+        >
+          <div className="avatar" style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(150deg, #5b8def, #8a6cf0)', display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 700, color: '#fff', marginRight: 0 }}>
+            {currentUser.username.substring(0, 2).toUpperCase()}
+          </div>
+          <span>Profile ({currentUser.username})</span>
+        </div>
+
         {/* Engine online healthcard */}
         <div className="engine-card" style={{ marginTop: 8 }}>
           <div className="card" style={{ padding: 13, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
@@ -254,30 +281,6 @@ export default function App() {
       </aside>
 
       <div className="main">
-        <header className="topbar">
-          <div className="icon-btn" onClick={toggleCollapsed} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} style={{ flexShrink: 0 }}>
-            <Icon name="panelLeft" size={18} />
-          </div>
-          {/*
-          <div className="search">
-            <Icon name="search" size={15} />
-            <input placeholder="Search transactions, cards, device IPs..." />
-          </div>
-
-          */}
-
-          <div className="topbar-right">
-            <div className="updated"><Icon name="refresh" size={13} /> Updated {updated}</div>
-            <div className="icon-btn" onClick={() => handleNavigate('hub')} style={{ cursor: 'pointer' }}>
-              <Icon name="bell" size={17} />
-              {openQueue > 0 && <span className="notif-dot">{openQueue > 9 ? '9+' : openQueue}</span>}
-            </div>
-            <div className="user-chip">
-              <span className="user-name">{currentUser.username}</span>
-              <div className="avatar">{currentUser.username.substring(0, 2).toUpperCase()}</div>
-            </div>
-          </div>
-        </header>
 
         {/* View routing */}
         {route === 'dashboard' && (

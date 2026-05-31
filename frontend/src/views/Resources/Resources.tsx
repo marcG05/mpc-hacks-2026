@@ -90,7 +90,7 @@ export function Resources() {
   ];
 
   return (
-    <div className="content fade-in" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 60px)', paddingBottom: 40 }}>
+    <div className="content fade-in" style={{ overflowY: 'auto', maxHeight: '100vh', paddingBottom: 40 }}>
       {/* Page Header */}
       <div className="page-head" style={{ marginBottom: 24 }}>
         <h1 className="page-title">Resources & Tools</h1>
@@ -162,7 +162,7 @@ export function Resources() {
                   value={ipInput} 
                   onChange={(e) => setIpInput(e.target.value)} 
                   placeholder="Enter IP (e.g. 184.22.91.4)..."
-                  style={{ flex: 1, padding: '8px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: '#fff', outline: 'none' }}
+                  style={{ flex: 1, padding: '8px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', outline: 'none' }}
                 />
                 <button className="btn btn-primary" onClick={runIpLookup} disabled={ipLoading}>
                   {ipLoading ? 'Scanning...' : 'Lookup'}
@@ -207,7 +207,7 @@ export function Resources() {
                   value={binInput} 
                   onChange={(e) => setBinInput(e.target.value.replace(/\D/g,''))} 
                   placeholder="Enter 6-8 digit BIN..."
-                  style={{ flex: 1, padding: '8px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: '#fff', outline: 'none' }}
+                  style={{ flex: 1, padding: '8px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', outline: 'none' }}
                 />
                 <button className="btn btn-primary" onClick={runBinCheck} disabled={binLoading}>
                   {binLoading ? 'Querying...' : 'Query'}
@@ -249,7 +249,7 @@ export function Resources() {
                   value={emailInput} 
                   onChange={(e) => setEmailInput(e.target.value)} 
                   placeholder="Enter email (e.g. name@domain.com)..."
-                  style={{ flex: 1, padding: '8px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: '#fff', outline: 'none' }}
+                  style={{ flex: 1, padding: '8px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', outline: 'none' }}
                 />
                 <button className="btn btn-primary" onClick={runEmailVerification} disabled={emailLoading}>
                   {emailLoading ? 'Verifying...' : 'Verify'}
