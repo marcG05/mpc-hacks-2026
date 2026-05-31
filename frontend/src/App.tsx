@@ -25,8 +25,6 @@ const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: 'grid' },
   { key: 'transactions', label: 'Transaction Log', icon: 'list' },
   { key: 'hub', label: 'Investigation Hub', icon: 'sparkle' },
-  { key: 'resources', label: 'Resources Hub', icon: 'globe' },
-  { key: 'settings', label: 'Engine Settings', icon: 'bolt' },
 ];
 
 function nowTime() {
@@ -206,7 +204,7 @@ export default function App() {
         <div className="brand" onClick={() => handleNavigate('dashboard')} style={{ cursor: 'pointer' }}>
           <div className="brand-mark"><Icon name="shield" size={18} style={{ color: '#fff' }} /></div>
           <div className="brand-text">
-            <div className="brand-name" style={{ letterSpacing: '-0.02em' }}>Fraud Hunter</div>
+            <div className="brand-name" style={{ letterSpacing: '-0.02em' }}>Falcon</div>
             <div className="brand-sub">Risk Operations</div>
           </div>
         </div>
@@ -222,19 +220,6 @@ export default function App() {
             <Icon name={n.icon} size={17} />
             <span>{n.label}</span>
             {n.key === 'hub' && openQueue > 0 && <span className="count">{openQueue}</span>}
-          </div>
-        ))}
-        
-        <div className="nav-group-label">System</div>
-        {NAV.slice(3).map((n) => (
-          <div 
-            key={n.key} 
-            title={collapsed ? n.label : undefined} 
-            className={'nav-item' + (route === n.key ? ' active' : '')} 
-            onClick={() => handleNavigate(n.key)}
-          >
-            <Icon name={n.icon} size={17} />
-            <span>{n.label}</span>
           </div>
         ))}
         
@@ -287,7 +272,7 @@ export default function App() {
               <Icon name="bell" size={17} />
               {openQueue > 0 && <span className="notif-dot">{openQueue > 9 ? '9+' : openQueue}</span>}
             </div>
-            <div className="user-chip" onClick={() => handleNavigate('settings')} style={{ cursor: 'pointer' }}>
+            <div className="user-chip">
               <span className="user-name">{currentUser.username}</span>
               <div className="avatar">{currentUser.username.substring(0, 2).toUpperCase()}</div>
             </div>

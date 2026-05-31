@@ -860,7 +860,7 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
             <div class="header">
               <div class="title-area">
                 <h1>Escalation Case File</h1>
-                <p>Fraud Hunter Operations Gateway</p>
+                <p>Falcon Operations Gateway</p>
               </div>
               <div class="logo-placeholder">FH Risk Ops</div>
             </div>
@@ -945,7 +945,7 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
 
             <div class="footer">
               CONFIDENTIAL DOCUMENT - SECURITY AND FRAUD INVESTIGATION PURPOSES ONLY.<br/>
-              Generated automatically by Fraud Hunter Gateway at ${new Date().toLocaleString()}.
+              Generated automatically by Falcon Gateway at ${new Date().toLocaleString()}.
             </div>
           </div>
 

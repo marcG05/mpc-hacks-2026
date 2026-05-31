@@ -345,7 +345,7 @@ export class EngineService implements OnModuleInit {
       return { response: "Warning: Gemini API Key ('gemapikey') is not configured in backend environment." };
     }
 
-    const systemPrompt = `You are Fraud Hunter Copilot, an expert fraud operations assistant.
+    const systemPrompt = `You are Falcon Copilot, an expert fraud operations assistant.
 You are helping Lucas triage transaction ${tx.id}.
 Here is the transaction metadata:
 - ID: ${tx.id}

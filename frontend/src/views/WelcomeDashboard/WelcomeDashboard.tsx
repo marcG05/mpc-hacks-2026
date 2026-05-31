@@ -42,7 +42,7 @@ export function WelcomeDashboard({ txns, metrics, onNavigate, onImportClick }: W
               WebkitBackgroundClip: 'text', 
               WebkitTextFillColor: 'transparent' 
             }}>
-              Fraud Hunter
+              Falcon
             </h1>
             <p style={{ fontSize: 16, color: 'var(--text-2)', margin: 0, lineHeight: 1.5, maxWidth: 500 }}>
               An interpretable real-time fraud operations workspace. Blending 15 independent rule weights with Isolation Forest safety nets to catch anomalies.

@@ -48,7 +48,7 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
           <div className="login-brand-mark">
             <Icon name="shield" size={24} style={{ color: '#fff' }} />
           </div>
-          <h1 className="login-title">Fraud Hunter</h1>
+          <h1 className="login-title">Falcon</h1>
           <p className="login-subtitle">Risk Operations Console</p>
         </div>
 
