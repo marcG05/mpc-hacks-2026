@@ -563,12 +563,14 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                     display: 'flex', 
                     flexDirection: 'column',
                     gap: 8, 
-                    background: expandedSignalKey === s.key ? 'var(--surface-3)' : 'var(--surface-2)', 
+                    background: expandedSignalKey === s.key ? '#F9F5FF' : '#FFFFFF', 
                     padding: 12, 
-                    borderRadius: 'var(--radius-sm)', 
-                    border: expandedSignalKey === s.key ? '1px solid var(--accent-line)' : '1px solid var(--border)',
+                    borderRadius: '12px', 
+                    border: expandedSignalKey === s.key ? '1.5px solid #7F56D9' : '1px solid #E4E7EC',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.15s ease',
+                    boxShadow: '0px 2px 4px rgba(16, 24, 40, 0.02)',
+                    fontFamily: 'var(--sans)',
                   }}
                 >
                   <div style={{ display: 'flex', gap: 10, width: '100%', alignItems: 'center' }}>
@@ -576,32 +578,33 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                       <Icon name={s.icon} size={14} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--text-1)' }}>{s.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2, lineHeight: 1.3 }}>{s.detail}</div>
+                      <div style={{ fontWeight: 600, fontSize: 12.5, color: '#101828', fontFamily: 'var(--sans)' }}>{s.name}</div>
+                      <div style={{ fontSize: 11, color: '#475467', marginTop: 2, lineHeight: 1.3, fontFamily: 'var(--sans)' }}>{s.detail}</div>
                     </div>
-                    <div className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--critical)' }}>+{s.weight.toFixed(1)}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#D92D20', fontFamily: 'var(--sans)' }}>+{s.weight.toFixed(1)}</div>
                   </div>
 
                   {/* Expanded Signal Details & Audit Recommendations */}
                   {expandedSignalKey === s.key && (
                     <div style={{ 
                       padding: '8px 10px', 
-                      background: 'var(--surface-2)', 
-                      borderRadius: 'var(--radius-sm)', 
+                      background: '#FFFFFF', 
+                      borderRadius: '8px', 
                       fontSize: 11.5, 
-                      color: 'var(--text-2)',
-                      border: '1px solid var(--border)',
+                      color: '#344054',
+                      border: '1px solid #E4E7EC',
                       lineHeight: 1.45,
                       marginTop: 4,
-                      animation: 'fadeIn 0.2s ease'
+                      animation: 'fadeIn 0.2s ease',
+                      fontFamily: 'var(--sans)',
                     }}
                     onClick={(e) => e.stopPropagation()}
                     >
-                      <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Icon name="info" size={11} style={{ color: 'var(--accent-hi)' }} />
+                      <div style={{ fontWeight: 600, color: '#101828', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--sans)' }}>
+                        <Icon name="info" size={11} style={{ color: '#7F56D9' }} />
                         Investigation Protocol:
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontFamily: 'var(--sans)' }}>
                         {s.name === 'Amount Anomaly' && (
                           <>
                             <div>• Check if cardholder has purchased high-value items in this category before.</div>
@@ -620,8 +623,8 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                             <>
                               <div>• Multiple cards checked out in quick succession. Indicates automated script.</div>
                               <div>• Flag associated session tokens.</div>
-                              <div style={{ marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
-                                <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 6, fontSize: 11 }}>
+                              <div style={{ marginTop: 8, borderTop: '1px solid #E4E7EC', paddingTop: 8 }}>
+                                <div style={{ fontWeight: 600, color: '#101828', marginBottom: 6, fontSize: 11 }}>
                                   Card Transaction History (Same Card: {activeTx.card}):
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 150, overflowY: 'auto', paddingRight: 4 }}>
@@ -633,20 +636,20 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                                         justifyContent: 'space-between', 
                                         alignItems: 'center', 
                                         padding: '6px 8px', 
-                                        background: rt.id === activeTx.id ? 'var(--accent-soft)' : 'var(--surface-2)', 
-                                        border: rt.id === activeTx.id ? '1px solid var(--accent)' : '1px solid var(--border)',
-                                        borderRadius: 4,
+                                        background: rt.id === activeTx.id ? '#F9F5FF' : '#FFFFFF', 
+                                        border: rt.id === activeTx.id ? '1px solid #7F56D9' : '1px solid #E4E7EC',
+                                        borderRadius: 6,
                                         fontSize: 10.5
                                       }}
                                     >
                                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span className="mono" style={{ fontWeight: rt.id === activeTx.id ? 700 : 500, color: 'var(--text)' }}>
+                                        <span style={{ fontWeight: rt.id === activeTx.id ? 600 : 500, color: '#101828' }}>
                                           {rt.id} {rt.id === activeTx.id && '(Current)'}
                                         </span>
-                                        <span style={{ color: 'var(--text-3)', fontSize: 9.5 }}>{rt.time} · {rt.merchant}</span>
+                                        <span style={{ color: '#667085', fontSize: 9.5 }}>{rt.time} · {rt.merchant}</span>
                                       </div>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <span className="mono" style={{ fontWeight: 600, color: 'var(--text)' }}>${rt.amount.toFixed(2)}</span>
+                                        <span style={{ fontWeight: 600, color: '#101828' }}>${rt.amount.toFixed(2)}</span>
                                         <span 
                                           style={{ 
                                             fontSize: 9, 
@@ -691,7 +694,7 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                 </div>
               ))}
               {activeTx.signals.length === 0 && (
-                <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)' }}>No explicit rule signals fired. Scoring driven by Isolation Forest.</div>
+                <div style={{ padding: 20, textAlign: 'center', color: '#667085', fontFamily: 'var(--sans)' }}>No explicit rule signals fired. Scoring driven by Isolation Forest.</div>
               )}
             </div>
           </div>
@@ -709,24 +712,24 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
             {/* Interactive Mapbox Map */}
             <MapboxMap originCountry={activeTx.country} destCountry={activeTx.merchantCountry} />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5 }}>
-              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--text-3)' }}>Cardholder Base</span>
-                <span style={{ fontWeight: 600 }}>{origin.name} ({activeTx.country})</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5, fontFamily: 'var(--sans)' }}>
+              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid #E4E7EC' }}>
+                <span style={{ color: '#667085' }}>Cardholder Base</span>
+                <span style={{ fontWeight: 600, color: '#101828' }}>{origin.name} ({activeTx.country})</span>
               </div>
-              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--text-3)' }}>Merchant Location</span>
-                <span style={{ fontWeight: 600 }}>{dest.name} ({activeTx.merchantCountry})</span>
+              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid #E4E7EC' }}>
+                <span style={{ color: '#667085' }}>Merchant Location</span>
+                <span style={{ fontWeight: 600, color: '#101828' }}>{dest.name} ({activeTx.merchantCountry})</span>
               </div>
-              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--text-3)' }}>Cross-border Mismatch</span>
-                <span className="mono" style={{ color: isCrossBorder ? 'var(--critical)' : 'var(--low)', fontWeight: 600 }}>
+              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid #E4E7EC' }}>
+                <span style={{ color: '#667085' }}>Cross-border Mismatch</span>
+                <span style={{ color: isCrossBorder ? '#B42318' : '#027A48', fontWeight: 600 }}>
                   {isCrossBorder ? 'YES' : 'NO'}
                 </span>
               </div>
-              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--text-3)' }}>Transit Distance</span>
-                <span className="mono" style={{ fontWeight: 600 }}>{isCrossBorder ? '3,840 miles' : '0 miles (Local)'}</span>
+              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid #E4E7EC' }}>
+                <span style={{ color: '#667085' }}>Transit Distance</span>
+                <span style={{ fontWeight: 600, color: '#101828' }}>{isCrossBorder ? '3,840 miles' : '0 miles (Local)'}</span>
               </div>
             </div>
           </div>
@@ -755,8 +758,8 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
             id: `card_${cardHash}`,
             vol,
             status,
-            color: status === 'Blocked' ? 'var(--critical)' : status === 'Review' ? 'var(--medium)' : 'var(--text-3)',
-            bg: status === 'Blocked' ? 'var(--critical-bg)' : status === 'Review' ? 'var(--medium-bg)' : 'var(--surface-3)'
+            color: status === 'Blocked' ? '#B42318' : status === 'Review' ? '#B54708' : '#344054',
+            bg: status === 'Blocked' ? '#FEF3F2' : status === 'Review' ? '#FFFAEB' : '#F2F4F7'
           };
         });
 
@@ -764,16 +767,16 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {/* Section Label with Line */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 2px' }}>
-              <Icon name="layers" size={13} style={{ color: 'var(--text-3)' }} />
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <Icon name="layers" size={13} style={{ color: '#667085' }} />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#667085', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Infrastructure & Network
               </span>
-              <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+              <div style={{ flex: 1, height: '1px', background: '#E4E7EC' }} />
             </div>
 
             {/* Outlined White Card for Device Fingerprint */}
-            <div style={{ background: '#FFFFFF', border: '1px solid var(--border)', borderRadius: '8px', padding: 14 }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <div style={{ background: '#FFFFFF', border: '1px solid #E4E7EC', borderRadius: '12px', padding: 14, boxShadow: '0px 2px 4px rgba(16, 24, 40, 0.02)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#667085', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em', fontFamily: 'var(--sans)' }}>
                 Shared Device Fingerprint (Last 24h)
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -783,14 +786,15 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   padding: '10px 12px', 
-                  background: '#FAF7F2', 
-                  borderRadius: '6px', 
-                  borderLeft: `4px solid ${cardCount > 2 ? 'var(--critical)' : 'var(--medium)'}` 
+                  background: '#F9FAFB', 
+                  borderRadius: '8px', 
+                  borderLeft: `4px solid ${cardCount > 2 ? '#B42318' : '#B54708'}`,
+                  fontFamily: 'var(--sans)',
                 }}>
-                  <span className="mono" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#101828' }}>
                     {deviceId}
                   </span>
-                  <span style={{ fontSize: '11px', color: cardCount > 2 ? 'var(--critical)' : 'var(--medium)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <span style={{ fontSize: '11px', color: cardCount > 2 ? '#B42318' : '#B54708', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
                     ▲ Used by {cardCount} cards
                   </span>
                 </div>
@@ -800,15 +804,16 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   padding: '10px 12px', 
-                  background: '#FAF7F2', 
-                  borderRadius: '6px', 
-                  borderLeft: `4px solid ${isVpn || isTor ? 'var(--critical)' : 'var(--medium)'}` 
+                  background: '#F9FAFB', 
+                  borderRadius: '8px', 
+                  borderLeft: `4px solid ${isVpn || isTor ? '#B42318' : '#B54708'}`,
+                  fontFamily: 'var(--sans)',
                 }}>
-                  <span className="mono" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text)' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#101828' }}>
                     {ipAddress}
                   </span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-2)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Icon name="globe" size={11} style={{ color: 'var(--text-3)' }} />
+                  <span style={{ fontSize: '11px', color: '#344054', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Icon name="globe" size={11} style={{ color: '#667085' }} />
                     {isVpn ? 'VPN / Proxy Detected' : isTor ? 'Tor Exit Node' : 'Residential ISP'}
                   </span>
                 </div>
@@ -817,39 +822,42 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
 
             {/* Other cards on this IP */}
             <div style={{ marginTop: 6 }}>
-              <div style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-2)', marginBottom: 6 }}>
+              <div style={{ fontWeight: 600, fontSize: '12px', color: '#344054', marginBottom: 6, fontFamily: 'var(--sans)' }}>
                 Other cards on this IP ({relatedCards.length}):
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
-                <thead>
-                  <tr style={{ background: '#F4EFE6', borderBottom: '1px solid var(--border)' }}>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Card ID</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Volume</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {relatedCards.map((row, i) => (
-                    <tr key={i} style={{ borderBottom: i < relatedCards.length - 1 ? '1px solid var(--border)' : 'none', background: '#FFFFFF' }}>
-                      <td className="mono" style={{ padding: '10px 12px', fontSize: '12px', fontWeight: 500, color: 'var(--text)' }}>{row.id}</td>
-                      <td className="mono" style={{ padding: '10px 12px', fontSize: '12px', fontWeight: 700, color: row.color }}>${row.vol}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '2px 8px',
-                          borderRadius: '99px',
-                          background: row.bg,
-                          color: row.color,
-                          fontSize: '11px',
-                          fontWeight: 700
-                        }}>
-                          {row.status}
-                        </span>
-                      </td>
+              <div style={{ border: '1px solid #E4E7EC', borderRadius: '12px', overflow: 'hidden', boxShadow: '0px 2px 4px rgba(16, 24, 40, 0.02)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E4E7EC' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: '#667085', textTransform: 'uppercase', letterSpacing: '0.04em', fontFamily: 'var(--sans)' }}>Card ID</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 600, color: '#667085', textTransform: 'uppercase', letterSpacing: '0.04em', fontFamily: 'var(--sans)' }}>Volume</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: '#667085', textTransform: 'uppercase', letterSpacing: '0.04em', fontFamily: 'var(--sans)' }}>Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {relatedCards.map((row, i) => (
+                      <tr key={i} style={{ borderBottom: i < relatedCards.length - 1 ? '1px solid #F2F4F7' : 'none', background: '#FFFFFF' }}>
+                        <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: 500, color: '#101828', fontFamily: 'var(--sans)' }}>{row.id}</td>
+                        <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: 600, color: row.color, fontFamily: 'var(--sans)' }}>${row.vol}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: '99px',
+                            background: row.bg,
+                            color: row.color,
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            fontFamily: 'var(--sans)'
+                          }}>
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         );
@@ -879,41 +887,41 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {/* Amount vs Median comparison */}
-              <div style={{ padding: 10, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                <div className="flex between" style={{ fontSize: 12, marginBottom: 6 }}>
-                  <span>Amount vs Card Median</span>
-                  <span className="mono" style={{ fontWeight: 600, color: amountRatio > 2 ? 'var(--critical)' : 'var(--text)' }}>
+              <div style={{ padding: 12, background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E4E7EC', boxShadow: '0px 2px 4px rgba(16, 24, 40, 0.02)' }}>
+                <div className="flex between" style={{ fontSize: 12.5, marginBottom: 6, fontFamily: 'var(--sans)' }}>
+                  <span style={{ color: '#667085' }}>Amount vs Card Median</span>
+                  <span style={{ fontWeight: 600, color: amountRatio > 2 ? '#B42318' : '#101828' }}>
                     ${activeTx.amount.toFixed(2)} / ${activeTx.cardMedian.toFixed(2)} ({amountRatio.toFixed(1)}x)
                   </span>
                 </div>
-                <div style={{ fontSize: 10.5, color: amountRatio > 2 ? 'var(--critical)' : 'var(--medium)', fontWeight: 600 }}>
+                <div style={{ fontSize: 10.5, color: amountRatio > 2 ? '#B42318' : '#B54708', fontWeight: 600, fontFamily: 'var(--sans)' }}>
                   {deviationLabel}
                 </div>
               </div>
 
-              <div style={{ padding: 10, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                <div className="flex between" style={{ fontSize: 12, marginBottom: 6 }}>
-                  <span>Engine Split Ensemble</span>
-                  <span className="mono" style={{ fontWeight: 600 }}>{rulesPct}% Rules / {modelPct}% Isolation Forest</span>
+              <div style={{ padding: 12, background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E4E7EC', boxShadow: '0px 2px 4px rgba(16, 24, 40, 0.02)' }}>
+                <div className="flex between" style={{ fontSize: 12.5, marginBottom: 6, fontFamily: 'var(--sans)' }}>
+                  <span style={{ color: '#667085' }}>Engine Split Ensemble</span>
+                  <span style={{ fontWeight: 600, color: '#101828' }}>{rulesPct}% Rules / {modelPct}% Isolation Forest</span>
                 </div>
-                <div style={{ height: 8, background: 'var(--border)', borderRadius: 99, overflow: 'hidden', display: 'flex' }}>
-                  <i style={{ width: `${rulesPct}%`, background: 'var(--accent)' }} title="Rules"></i>
-                  <i style={{ width: `${modelPct}%`, background: 'var(--violet)' }} title="Anomaly Model"></i>
+                <div style={{ height: 8, background: '#F2F4F7', borderRadius: 99, overflow: 'hidden', display: 'flex' }}>
+                  <i style={{ width: `${rulesPct}%`, background: '#7F56D9' }} title="Rules"></i>
+                  <i style={{ width: `${modelPct}%`, background: '#C084FC' }} title="Anomaly Model"></i>
                 </div>
               </div>
 
-              <div style={{ padding: 10, background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                <div className="flex between" style={{ fontSize: 12, marginBottom: 6 }}>
-                  <span>Composite Risk Score</span>
-                  <span className="mono" style={{ fontWeight: 700, color: activeTx.score >= 0.8 ? 'var(--critical)' : activeTx.score >= 0.6 ? 'var(--high)' : 'var(--medium)' }}>
+              <div style={{ padding: 12, background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E4E7EC', boxShadow: '0px 2px 4px rgba(16, 24, 40, 0.02)' }}>
+                <div className="flex between" style={{ fontSize: 12.5, marginBottom: 6, fontFamily: 'var(--sans)' }}>
+                  <span style={{ color: '#667085' }}>Composite Risk Score</span>
+                  <span style={{ fontWeight: 700, color: activeTx.score >= 0.8 ? '#B42318' : activeTx.score >= 0.6 ? '#B93815' : '#B54708' }}>
                     {(activeTx.score * 100).toFixed(0)}%
                   </span>
                 </div>
-                <div style={{ height: 8, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{ height: 8, background: '#F2F4F7', borderRadius: 99, overflow: 'hidden' }}>
                   <div style={{ 
                     width: `${activeTx.score * 100}%`, 
                     height: '100%',
-                    background: activeTx.score >= 0.8 ? 'var(--critical)' : activeTx.score >= 0.6 ? 'var(--high)' : 'var(--medium)',
+                    background: activeTx.score >= 0.8 ? '#B42318' : activeTx.score >= 0.6 ? '#B93815' : '#B54708',
                     borderRadius: 99,
                     transition: 'width 0.3s ease'
                   }} />
@@ -921,18 +929,18 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
               </div>
 
               <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                <div style={{ fontSize: 11.5, color: '#667085', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 600, fontFamily: 'var(--sans)' }}>
                   Signal Influence Weight ({activeTx.signals.length} signals)
                 </div>
                 {activeTx.signals.map((s, i) => (
-                  <div className="brk-row" key={i} style={{ marginBottom: 10 }}>
-                    <div className="brk-name" style={{ width: 140, fontSize: 12 }} title={s.name}>{s.name}</div>
-                    <div className="brk-bar"><i style={{ width: Math.min(100, s.weight / 2.5 * 100) + "%", background: sigColorVar(s.color) }}></i></div>
-                    <div className="brk-val">{s.weight.toFixed(1)}</div>
+                  <div className="brk-row" key={i} style={{ marginBottom: 10, fontFamily: 'var(--sans)' }}>
+                    <div className="brk-name" style={{ width: 140, fontSize: 12, color: '#344054' }} title={s.name}>{s.name}</div>
+                    <div className="brk-bar" style={{ background: '#F2F4F7' }}><i style={{ width: Math.min(100, s.weight / 2.5 * 100) + "%", background: sigColorVar(s.color) }}></i></div>
+                    <div style={{ fontSize: 11.5, fontWeight: 600, color: '#344054', width: 32, textAlign: 'right' }}>{s.weight.toFixed(1)}</div>
                   </div>
                 ))}
                 {activeTx.signals.length === 0 && (
-                  <div style={{ padding: 12, textAlign: 'center', color: 'var(--text-3)', fontSize: 11.5 }}>
+                  <div style={{ padding: 12, textAlign: 'center', color: '#667085', fontSize: 11.5, fontFamily: 'var(--sans)' }}>
                     No explicit rule signals. Score derived from anomaly model.
                   </div>
                 )}
@@ -964,15 +972,15 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div className="sec-label" style={{ margin: 0 }}><Icon name="clock" size={13} /> Velocity & Timestamp Analysis</div>
             
-            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 12 }}>
-              <div className="flex between" style={{ marginBottom: 10 }}>
+            <div style={{ background: '#FFFFFF', border: '1px solid #E4E7EC', borderRadius: '12px', padding: 12, boxShadow: '0px 2px 4px rgba(16, 24, 40, 0.02)' }}>
+              <div className="flex between" style={{ marginBottom: 10, fontFamily: 'var(--sans)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="clock" size={15} style={{ color: isOvernight ? 'var(--critical)' : 'var(--accent)' }} />
-                  <span style={{ fontSize: 12.5, fontWeight: 600 }}>{windowLabel}</span>
+                  <Icon name="clock" size={15} style={{ color: isOvernight ? '#B42318' : '#7F56D9' }} />
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: '#101828' }}>{windowLabel}</span>
                 </div>
-                <span className="mono" style={{ fontSize: 12, color: isOvernight ? 'var(--critical)' : 'var(--medium)' }}>{activeTx.time}</span>
+                <span style={{ fontSize: 12, color: isOvernight ? '#B42318' : '#B54708', fontWeight: 600 }}>{activeTx.time}</span>
               </div>
-              <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.45 }}>
+              <p style={{ margin: 0, fontSize: 11.5, color: '#475467', lineHeight: 1.45, fontFamily: 'var(--sans)' }}>
                 This charge was processed at local time <strong>{activeTx.time}</strong>.{' '}
                 {isOvernight 
                   ? `Based on history for card ${activeTx.card}, the owner has a ${sleepProb}% probability of sleeping during this hour.`
@@ -981,26 +989,26 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
               </p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5, marginTop: 4 }}>
-              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--text-3)' }}>15-Min Velocity</span>
-                <span className="mono" style={{ fontWeight: 600, color: vel15 >= 3 ? 'var(--critical)' : 'var(--text)' }}>{vel15} transaction{vel15 !== 1 ? 's' : ''}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5, marginTop: 4, fontFamily: 'var(--sans)' }}>
+              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid #E4E7EC' }}>
+                <span style={{ color: '#667085' }}>15-Min Velocity</span>
+                <span style={{ fontWeight: 600, color: vel15 >= 3 ? '#B42318' : '#101828' }}>{vel15} transaction{vel15 !== 1 ? 's' : ''}</span>
               </div>
-              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--text-3)' }}>1-Hour Velocity</span>
-                <span className="mono" style={{ fontWeight: 600, color: vel1h >= 5 ? 'var(--critical)' : 'var(--text)' }}>{vel1h} transactions</span>
+              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid #E4E7EC' }}>
+                <span style={{ color: '#667085' }}>1-Hour Velocity</span>
+                <span style={{ fontWeight: 600, color: vel1h >= 5 ? '#B42318' : '#101828' }}>{vel1h} transactions</span>
               </div>
-              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--text-3)' }}>Merchant Category Velocity</span>
-                <span className="mono" style={{ fontWeight: 600, color: burstLevel === 'Suspicious burst' ? 'var(--critical)' : 'var(--text)' }}>{burstLevel} ({categoryBurst})</span>
+              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid #E4E7EC' }}>
+                <span style={{ color: '#667085' }}>Merchant Category Velocity</span>
+                <span style={{ fontWeight: 600, color: burstLevel === 'Suspicious burst' ? '#B42318' : '#101828' }}>{burstLevel} ({categoryBurst})</span>
               </div>
-              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--text-3)' }}>Channel</span>
-                <span className="mono" style={{ fontWeight: 600 }}>{activeTx.channel}</span>
+              <div className="flex between" style={{ padding: '6px 0', borderBottom: '1px solid #E4E7EC' }}>
+                <span style={{ color: '#667085' }}>Channel</span>
+                <span style={{ fontWeight: 600, color: '#101828' }}>{activeTx.channel}</span>
               </div>
               <div className="flex between" style={{ padding: '6px 0' }}>
-                <span style={{ color: 'var(--text-3)' }}>Transaction Country</span>
-                <span className="mono" style={{ fontWeight: 600 }}>{activeTx.country} → {activeTx.merchantCountry}</span>
+                <span style={{ color: '#667085' }}>Transaction Country</span>
+                <span style={{ fontWeight: 600, color: '#101828' }}>{activeTx.country} → {activeTx.merchantCountry}</span>
               </div>
             </div>
           </div>
@@ -1067,8 +1075,8 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
             <div
               style={{
                 display: 'flex',
-                background: '#F4EFE6',
-                border: '1px solid #E6DFD3',
+                background: '#F2F4F7',
+                border: '1px solid #E4E7EC',
                 borderRadius: '99px',
                 padding: '3px',
                 gap: '2px',
@@ -1076,7 +1084,6 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
             >
               {(['signals', 'location', 'device', 'card', 'time'] as TabKey[]).map((tab) => {
                 const isActive = activeTab === tab;
-                const activeColor = tab === 'device' ? 'var(--violet)' : 'var(--primary)';
                 return (
                   <button
                     key={tab}
@@ -1090,8 +1097,8 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                       fontWeight: 600,
                       fontFamily: 'var(--sans)',
                       background: isActive ? '#FFFFFF' : 'transparent',
-                      color: isActive ? activeColor : 'var(--text-3)',
-                      boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                      color: isActive ? '#53389E' : '#667085',
+                      boxShadow: isActive ? '0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.04)' : 'none',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 5,

@@ -42,7 +42,7 @@ export function CopilotChat({
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateRows: '1fr auto', height: '100%', overflow: 'hidden', background: 'var(--chat-bg)' }}>
+    <div style={{ display: 'grid', gridTemplateRows: '1fr auto', height: '100%', overflow: 'hidden', background: 'var(--chat-bg)', borderTopLeftRadius: 'var(--radius)', borderTopRightRadius: 'var(--radius)' }}>
 
       {/* ── Scrollable messages ─────────────────────────────── */}
       <div

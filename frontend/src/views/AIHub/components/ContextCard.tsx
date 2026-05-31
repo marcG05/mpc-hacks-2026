@@ -20,29 +20,29 @@ const TAB_CONFIG = [
 
 function renderSeverityPill(score: number) {
   let label = 'Low';
-  let dotColor = 'var(--low)';
-  let borderColor = 'rgba(34, 197, 94, 0.25)';
-  let bg = 'rgba(34, 197, 94, 0.04)';
-  let fgColor = 'var(--low)';
+  let dotColor = '#12B76A'; // Soft emerald green
+  let borderColor = '#D1FADF';
+  let bg = '#ECFDF3';
+  let fgColor = '#027A48';
 
   if (score >= 0.8) {
     label = 'Critical';
-    dotColor = 'var(--critical)';
-    borderColor = 'rgba(239, 68, 68, 0.25)';
-    bg = 'rgba(239, 68, 68, 0.04)';
-    fgColor = 'var(--critical)';
+    dotColor = '#D92D20'; // Soft crimson red
+    borderColor = '#FEE4E2';
+    bg = '#FEF3F2';
+    fgColor = '#B42318';
   } else if (score >= 0.6) {
     label = 'High';
-    dotColor = 'var(--high)';
-    borderColor = 'rgba(249, 115, 22, 0.25)';
-    bg = 'rgba(249, 115, 22, 0.04)';
-    fgColor = 'var(--high)';
+    dotColor = '#EF6820'; // Soft warm orange
+    borderColor = '#FFEAD5';
+    bg = '#FEF6EE';
+    fgColor = '#B93815';
   } else if (score >= 0.45) {
     label = 'Medium';
-    dotColor = 'var(--medium)';
-    borderColor = 'rgba(234, 179, 8, 0.35)';
-    bg = '#FFFDF2';
-    fgColor = 'var(--medium)';
+    dotColor = '#F79009'; // Soft amber yellow
+    borderColor = '#FEF0C7';
+    bg = '#FFFAEB';
+    fgColor = '#B54708';
   }
 
   return (
@@ -56,7 +56,7 @@ function renderSeverityPill(score: number) {
       background: bg,
       color: fgColor,
       fontSize: 11,
-      fontWeight: 700,
+      fontWeight: 600,
       fontFamily: 'var(--sans)'
     }}>
       <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, display: 'inline-block' }} />
@@ -70,15 +70,16 @@ export function ContextCard({ activeTx, activeTab, setActiveTab }: ContextCardPr
     <div
       className="card"
       style={{
-        margin: '0 0 10px 0',
+        margin: '0 0 16px 0',
         padding: '24px',
         display: 'flex',
         flexDirection: 'column',
         gap: 16,
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)',
-        boxShadow: 'var(--shadow-xs)'
+        background: '#FFFFFF',
+        border: '1px solid #E4E7EC',
+        borderRadius: '16px',
+        boxShadow: '0px 4px 18px rgba(16, 24, 40, 0.03), 0px 1px 3px rgba(16, 24, 40, 0.02)',
+        fontFamily: 'var(--sans)',
       }}
     >
       {/* ── Row 1: Giant Amount + meta tags + severity pill ── */}
@@ -92,38 +93,42 @@ export function ContextCard({ activeTx, activeTab, setActiveTab }: ContextCardPr
         {/* Left: Giant Amount + badges */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <span
-            className="mono"
-            style={{ fontSize: 32, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.035em' }}
+            style={{
+              fontSize: 34,
+              fontWeight: 700,
+              color: '#101828',
+              letterSpacing: '-0.03em',
+              fontFamily: 'var(--sans)',
+            }}
           >
             ${activeTx.amount.toFixed(2)}
           </span>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <span
-              className="mono"
               style={{
-                fontSize: 10.5,
-                fontWeight: 700,
-                color: 'var(--text-2)',
-                background: '#F4EFE6',
-                padding: '3px 8px',
-                borderRadius: 4,
-                border: '1px solid var(--border)',
-                letterSpacing: '0.01em',
+                fontSize: 11,
+                fontWeight: 500,
+                color: '#344054',
+                background: '#F2F4F7',
+                padding: '3.5px 8px',
+                borderRadius: 6,
+                border: '1px solid #E4E7EC',
+                fontFamily: 'var(--sans)',
               }}
             >
               {activeTx.id}
             </span>
             <span
               style={{
-                fontSize: 10.5,
-                fontWeight: 800,
-                color: 'var(--violet)',
-                background: 'rgba(139, 92, 246, 0.08)',
+                fontSize: 11,
+                fontWeight: 600,
+                color: '#5925DC',
+                background: '#F4F3FF',
                 padding: '3.5px 8px',
-                borderRadius: 4,
-                border: '1px solid rgba(139, 92, 246, 0.16)',
+                borderRadius: 6,
+                border: '1px solid #D9D6FE',
                 textTransform: 'uppercase',
-                letterSpacing: '0.04em',
+                fontFamily: 'var(--sans)',
               }}
             >
               {FRAUD.FRAUD_TYPES[activeTx.type] || activeTx.type}
@@ -134,18 +139,24 @@ export function ContextCard({ activeTx, activeTab, setActiveTab }: ContextCardPr
         {/* Right: Timestamp label + severity pill */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
           <div style={{ textAlign: 'right' }}>
-            <div className="mono" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>
+            <div style={{
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: '#344054',
+              fontFamily: 'var(--sans)',
+            }}>
               {activeTx.timestamp || activeTx.time}
             </div>
             <span
               style={{
                 fontSize: 9.5,
-                color: 'var(--text-4)',
+                color: '#98A2B3',
                 textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                fontWeight: 700,
+                letterSpacing: '0.05em',
+                fontWeight: 600,
                 display: 'block',
-                marginTop: 2
+                marginTop: 2,
+                fontFamily: 'var(--sans)',
               }}
             >
               Timestamp
@@ -156,14 +167,14 @@ export function ContextCard({ activeTx, activeTab, setActiveTab }: ContextCardPr
       </div>
 
       {/* Horizontal Divider Separator */}
-      <div style={{ height: 1, background: 'var(--border)', margin: '0' }} />
+      <div style={{ height: 1, background: '#F2F4F7', margin: '4px 0' }} />
 
       {/* ── Row 2: 2x3 Outline Card Grid ──────────────────── */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '10px',
+          gap: '12px',
         }}
       >
         {TAB_CONFIG.map(({ tab, label, icon, getValue }) => {
@@ -176,17 +187,18 @@ export function ContextCard({ activeTx, activeTab, setActiveTab }: ContextCardPr
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'flex-start',
-                padding: '12px 14px',
-                background: isActive ? 'var(--primary-soft)' : 'var(--surface)',
-                border: isActive ? '1.5px solid var(--violet)' : '1px solid var(--border)',
-                color: isActive ? 'var(--primary)' : 'var(--text-3)',
-                borderRadius: 'var(--radius-sm)',
+                padding: '12px 16px',
+                background: isActive ? '#F9F5FF' : '#F9FAFB',
+                border: isActive ? '1.5px solid #7F56D9' : '1px solid #E4E7EC',
+                color: isActive ? '#4A1FB8' : '#344054',
+                borderRadius: '12px',
                 cursor: 'pointer',
                 textAlign: 'left',
-                minHeight: 56,
-                transition: 'all .12s',
+                minHeight: 58,
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 fontFamily: 'var(--sans)',
-                boxShadow: 'var(--shadow-xs)'
+                boxShadow: '0px 1px 2px rgba(16, 24, 40, 0.04)',
+                outline: 'none',
               }}
             >
               <div
@@ -196,25 +208,26 @@ export function ContextCard({ activeTx, activeTab, setActiveTab }: ContextCardPr
                   gap: 5,
                   fontSize: 9.5,
                   textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                  fontWeight: 600,
                   marginBottom: 6,
-                  color: isActive ? 'var(--violet)' : 'var(--text-4)',
+                  color: isActive ? '#7F56D9' : '#667085',
+                  fontFamily: 'var(--sans)',
                 }}
               >
                 <Icon name={icon} size={10} />
                 {label}
               </div>
               <div
-                className="mono"
                 style={{
-                  fontSize: 13,
-                  fontWeight: 700,
+                  fontSize: 13.5,
+                  fontWeight: 600,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   width: '100%',
-                  color: '#1A1A1A',
+                  color: isActive ? '#53389E' : '#1D2939',
+                  fontFamily: 'var(--sans)',
                 }}
               >
                 {getValue(activeTx)}

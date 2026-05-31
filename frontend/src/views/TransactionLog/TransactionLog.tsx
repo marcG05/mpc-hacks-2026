@@ -13,7 +13,7 @@ interface TransactionLogProps {
 
 type SortCol = 'score' | 'amount' | 'id' | 'merchant' | 'status';
 
-export function TransactionLog({ txns, onSelect, onAction, currentUser }: TransactionLogProps) {
+export function TransactionLog({ txns, onSelect: _onSelect, onAction, currentUser }: TransactionLogProps) {
   // Drawer state
   const [drawerTx, setDrawerTx] = useState<Transaction | null>(null);
 

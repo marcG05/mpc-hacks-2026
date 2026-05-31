@@ -24,8 +24,8 @@ function renderCategoryAvatar(category: string, merchant: string) {
   if (m.includes('atm')) {
     return (
       <div style={{
-        width: 32, height: 32, borderRadius: 6, background: '#FFEAB6', color: '#B27B00',
-        display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 800, fontFamily: 'var(--mono)',
+        width: 32, height: 32, borderRadius: 8, background: '#FEF0C7', color: '#B54708',
+        display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 600, fontFamily: 'var(--sans)',
         flexShrink: 0
       }}>
         ATM
@@ -35,7 +35,7 @@ function renderCategoryAvatar(category: string, merchant: string) {
   if (m.includes('schwartz') || category === 'dining' || category === 'food') {
     return (
       <div style={{
-        width: 32, height: 32, borderRadius: 6, background: '#E2E3E5', color: '#383d41',
+        width: 32, height: 32, borderRadius: 8, background: '#F2F4F7', color: '#344054',
         display: 'grid', placeItems: 'center', flexShrink: 0
       }}>
         {/* Fork & Spoon SVG icon */}
@@ -50,7 +50,7 @@ function renderCategoryAvatar(category: string, merchant: string) {
   // Default: shopping / retail pink bag
   return (
     <div style={{
-      width: 32, height: 32, borderRadius: 6, background: '#FFD1E1', color: '#D63384',
+      width: 32, height: 32, borderRadius: 8, background: '#FCE7F3', color: '#C11574',
       display: 'grid', placeItems: 'center', flexShrink: 0
     }}>
       {/* Shopping bag SVG */}
@@ -135,14 +135,15 @@ export function QueueSidebar({
                 {tab === 'queue' ? 'Queue' : 'Escalated'}
                 <span
                   style={{
-                    minWidth: 16,
+                    minWidth: 18,
                     height: 16,
                     borderRadius: 99,
                     fontSize: 9.5,
-                    fontFamily: 'var(--mono)',
+                    fontFamily: 'var(--sans)',
+                    fontWeight: 600,
                     display: 'grid',
                     placeItems: 'center',
-                    padding: '0 4px',
+                    padding: '0 5px',
                     background: isActive
                       ? tab === 'queue'
                         ? count > 0 ? 'var(--critical)' : 'var(--surface-hi)'
@@ -176,39 +177,41 @@ export function QueueSidebar({
                   onClick={() => setSelectedTx(t)}
                   style={{
                     padding: '16px',
-                    borderRadius: 'var(--radius)',
-                    background: 'var(--surface)',
-                    border: isActive ? '1.5px solid var(--chat-user-bg)' : '1px solid var(--border)',
-                    boxShadow: 'var(--shadow-xs)',
+                    borderRadius: '12px',
+                    background: '#FFFFFF',
+                    border: isActive ? '1.5px solid #7F56D9' : '1px solid #E4E7EC',
+                    boxShadow: '0px 2px 4px rgba(16, 24, 40, 0.02)',
                     cursor: 'pointer',
                     transition: 'all .12s',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 12,
+                    fontFamily: 'var(--sans)',
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) e.currentTarget.style.borderColor = 'var(--border-hi)';
                   }}
                   onMouseLeave={(e) => {
-                    if (!isActive) e.currentTarget.style.borderColor = 'var(--border)';
+                    if (!isActive) e.currentTarget.style.borderColor = '#E4E7EC';
                   }}
                 >
                   {/* Top Row: Avatar + Title block + circular chevron button */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     {renderCategoryAvatar(t.category, t.merchant)}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="mono" style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600 }}>
+                      <div style={{ fontSize: 10.5, color: '#667085', fontWeight: 500, fontFamily: 'var(--sans)' }}>
                         {t.id}
                       </div>
                       <div
                         style={{
                           fontSize: 13.5,
-                          fontWeight: 700,
-                          color: 'var(--text-1)',
+                          fontWeight: 600,
+                          color: '#101828',
                           textOverflow: 'ellipsis',
                           overflow: 'hidden',
                           whiteSpace: 'nowrap',
                           marginTop: 1,
+                          fontFamily: 'var(--sans)',
                         }}
                       >
                         {t.merchant}
@@ -216,10 +219,10 @@ export function QueueSidebar({
                     </div>
                     {/* Circlechevron button */}
                     <div style={{
-                      width: 22, height: 22, borderRadius: '50%', background: '#FFFFFF', border: '1px solid var(--border)',
+                      width: 22, height: 22, borderRadius: '50%', background: '#FFFFFF', border: '1px solid #E4E7EC',
                       display: 'grid', placeItems: 'center', flexShrink: 0
                     }}>
-                      <Icon name="chevron" size={10} style={{ color: 'var(--text-3)' }} />
+                      <Icon name="chevron" size={10} style={{ color: '#98A2B3' }} />
                     </div>
                   </div>
 
@@ -230,12 +233,14 @@ export function QueueSidebar({
                         key={tag}
                         style={{
                           fontSize: 9,
-                          fontWeight: 700,
-                          background: '#F4EFE6',
-                          color: '#4B4B4B',
+                          fontWeight: 600,
+                          background: '#F2F4F7',
+                          color: '#344054',
+                          border: '1px solid #E4E7EC',
                           padding: '2.5px 8px',
-                          borderRadius: 99,
+                          borderRadius: 6,
                           letterSpacing: '0.02em',
+                          fontFamily: 'var(--sans)',
                         }}
                       >
                         {tag}
@@ -244,23 +249,23 @@ export function QueueSidebar({
                   </div>
 
                   {/* Thin divider line */}
-                  <div style={{ height: 1, background: 'var(--border)' }} />
+                  <div style={{ height: 1, background: '#F2F4F7' }} />
 
                   {/* Bottom Row: Risk Score + Amount */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--text-4)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                      <div style={{ fontSize: 9, fontWeight: 600, color: '#98A2B3', letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
                         Risk Score
                       </div>
-                      <div className="mono" style={{ fontSize: 15, fontWeight: 800, color: 'var(--violet)', marginTop: 2 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#6941C6', marginTop: 2, fontFamily: 'var(--sans)' }}>
                         {(t.score * 100).toFixed(0)}%
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--text-4)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                      <div style={{ fontSize: 9, fontWeight: 600, color: '#98A2B3', letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
                         Amount
                       </div>
-                      <div className="mono" style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)', marginTop: 2 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#101828', marginTop: 2, fontFamily: 'var(--sans)' }}>
                         ${t.amount.toFixed(2)}
                       </div>
                     </div>
@@ -296,35 +301,37 @@ export function QueueSidebar({
                   onClick={() => setViewingReport(r)}
                   style={{
                     padding: '16px',
-                    borderRadius: 'var(--radius)',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    boxShadow: 'var(--shadow-xs)',
+                    borderRadius: '12px',
+                    background: '#FFFFFF',
+                    border: '1px solid #E4E7EC',
+                    boxShadow: '0px 2px 4px rgba(16, 24, 40, 0.02)',
                     cursor: 'pointer',
                     transition: 'all .12s',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 12,
+                    fontFamily: 'var(--sans)',
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary-line)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E4E7EC'; }}
                 >
                   {/* Top Row: Avatar + Title */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     {renderCategoryAvatar('escalated', r.txId)}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="mono" style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600 }}>
+                      <div style={{ fontSize: 10.5, color: '#667085', fontWeight: 500, fontFamily: 'var(--sans)' }}>
                         {r.txId}
                       </div>
                       <div
                         style={{
                           fontSize: 13.5,
-                          fontWeight: 700,
-                          color: 'var(--text-1)',
+                          fontWeight: 600,
+                          color: '#101828',
                           textOverflow: 'ellipsis',
                           overflow: 'hidden',
                           whiteSpace: 'nowrap',
                           marginTop: 1,
+                          fontFamily: 'var(--sans)',
                         }}
                       >
                         {r.assignee}
@@ -332,10 +339,10 @@ export function QueueSidebar({
                     </div>
                     {/* Circlechevron button */}
                     <div style={{
-                      width: 22, height: 22, borderRadius: '50%', background: '#FFFFFF', border: '1px solid var(--border)',
+                      width: 22, height: 22, borderRadius: '50%', background: '#FFFFFF', border: '1px solid #E4E7EC',
                       display: 'grid', placeItems: 'center', flexShrink: 0
                     }}>
-                      <Icon name="chevron" size={10} style={{ color: 'var(--text-3)' }} />
+                      <Icon name="chevron" size={10} style={{ color: '#98A2B3' }} />
                     </div>
                   </div>
 
@@ -346,12 +353,14 @@ export function QueueSidebar({
                         key={tag}
                         style={{
                           fontSize: 9,
-                          fontWeight: 700,
-                          background: '#F4EFE6',
-                          color: '#4B4B4B',
+                          fontWeight: 600,
+                          background: '#F2F4F7',
+                          color: '#344054',
+                          border: '1px solid #E4E7EC',
                           padding: '2.5px 8px',
-                          borderRadius: 99,
+                          borderRadius: 6,
                           letterSpacing: '0.02em',
+                          fontFamily: 'var(--sans)',
                         }}
                       >
                         {tag}
@@ -360,23 +369,23 @@ export function QueueSidebar({
                   </div>
 
                   {/* Thin divider line */}
-                  <div style={{ height: 1, background: 'var(--border)' }} />
+                  <div style={{ height: 1, background: '#F2F4F7' }} />
 
                   {/* Bottom Row: Risk Score + Amount */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--text-4)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                      <div style={{ fontSize: 9, fontWeight: 600, color: '#98A2B3', letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
                         Risk Score
                       </div>
-                      <div className="mono" style={{ fontSize: 15, fontWeight: 800, color: 'var(--violet)', marginTop: 2 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#6941C6', marginTop: 2, fontFamily: 'var(--sans)' }}>
                         99%
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 8.5, fontWeight: 700, color: 'var(--text-4)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                      <div style={{ fontSize: 9, fontWeight: 600, color: '#98A2B3', letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
                         Amount
                       </div>
-                      <div className="mono" style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-1)', marginTop: 2 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#101828', marginTop: 2, fontFamily: 'var(--sans)' }}>
                         ${r.amount.toFixed(2)}
                       </div>
                     </div>
