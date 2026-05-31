@@ -51,7 +51,7 @@ export function ReportViewerModal({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Icon name="escalate" size={16} style={{ color: 'var(--accent-hi)' }} />
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#fff' }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#000' }}>
               Escalation Dispatch Triage Package
             </h3>
           </div>
@@ -66,7 +66,7 @@ export function ReportViewerModal({
         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', maxHeight: 'calc(100vh - 150px)' }}>
           <div style={{ padding: '12px 16px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span className="mono" style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>{viewingReport.txId}</span>
+              <span className="mono" style={{ fontWeight: 700, fontSize: 14, color: '#000' }}>{viewingReport.txId}</span>
               <span style={{ fontWeight: 700, color: 'var(--critical)', fontSize: 14 }}>${viewingReport.amount.toFixed(2)}</span>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
@@ -115,39 +115,6 @@ export function ReportViewerModal({
               {viewingReport.notes || '(No notes attached)'}
             </div>
           </div>
-
-          {viewingReport.audioMemo && (
-            <div style={{
-              padding: 12,
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Icon name="freeze" size={14} style={{ color: 'var(--accent-hi)' }} />
-                <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Triage Voice Memo (0:12s)</span>
-              </div>
-              <button
-                style={{
-                  background: 'var(--accent-soft)',
-                  border: '1px solid var(--accent-line)',
-                  color: 'var(--accent-hi)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '4px 10px',
-                  fontSize: 11,
-                  cursor: 'pointer',
-                  fontWeight: 600
-                }}
-                onClick={() => alert("Playing triage voice memo...")}
-              >
-                Play
-              </button>
-            </div>
-          )}
         </div>
 
         <div style={{

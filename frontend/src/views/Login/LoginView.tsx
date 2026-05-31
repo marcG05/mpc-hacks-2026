@@ -114,22 +114,6 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
             )}
           </button>
         </form>
-
-        <div className="login-footer">
-          <div className="hint-box">
-            <div className="hint-header flex">
-              <Icon name="info" size={13} style={{ color: 'var(--accent-hi)' }} />
-              <span>Default Credentials</span>
-            </div>
-            <p className="hint-text">
-              Sign in with <strong>Marc</strong> and password <strong>1234</strong>
-            </p>
-          </div>
-          <div className="system-status flex">
-            <span className="status-dot online"></span>
-            <span>Security Gateway Online</span>
-          </div>
-        </div>
       </div>
     </div>
   );

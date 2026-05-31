@@ -169,69 +169,6 @@ export function EscalationModal({ activeTx, onClose, onConfirm }: EscalationModa
               </select>
             </div>
           </div>
-
-          <div style={{
-            padding: 12,
-            background: 'var(--surface-2)',
-            border: '1px dashed var(--border)',
-            borderRadius: 'var(--radius-sm)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 10
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-2)' }}>Triage Voice Memo</span>
-              {isRecording && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span className="dot" style={{ width: 6, height: 6, background: 'var(--critical)', borderRadius: '50%', animation: 'pulse 1s infinite' }}></span>
-                  <span className="mono" style={{ fontSize: 10, color: 'var(--critical)' }}>Recording...</span>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button
-                onClick={handleToggleRecording}
-                style={{
-                  background: isRecording ? 'var(--critical)' : 'rgba(255,255,255,0.06)',
-                  border: '1px solid ' + (isRecording ? 'var(--critical)' : 'var(--border)'),
-                  color: isRecording ? '#fff' : 'var(--text-2)',
-                  borderRadius: '50%',
-                  width: 32,
-                  height: 32,
-                  display: 'grid',
-                  placeItems: 'center',
-                  cursor: 'pointer'
-                }}
-              >
-                {isRecording ? <div style={{ width: 10, height: 10, background: '#fff', borderRadius: 2 }}></div> : <span style={{ width: 10, height: 10, background: 'var(--critical)', borderRadius: '50%' }}></span>}
-              </button>
-
-              <div style={{ flex: 1, height: 20, display: 'flex', alignItems: 'center', gap: 2 }}>
-                {isRecording ? (
-                  Array.from({ length: 15 }).map((_, i) => {
-                    const h = Math.floor(Math.random() * 16) + 4;
-                    return (
-                      <i key={i} style={{ flex: 1, height: h, background: 'var(--accent)', borderRadius: 1 }} />
-                    );
-                  })
-                ) : hasRecording ? (
-                  <span style={{ fontSize: 11, color: 'var(--low)' }}>Voice Memo Saved (0:12s)</span>
-                ) : (
-                  <span style={{ fontSize: 11, color: 'var(--text-4)' }}>No voice memo attached</span>
-                )}
-              </div>
-
-              {hasRecording && !isRecording && (
-                <button
-                  onClick={() => setHasRecording(false)}
-                  style={{ background: 'transparent', border: 0, color: 'var(--critical)', cursor: 'pointer', fontSize: 11 }}
-                >
-                  Delete
-                </button>
-              )}
-            </div>
-          </div>
         </div>
 
         <div style={{
