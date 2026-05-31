@@ -591,6 +591,19 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
     return txns.filter(t => t.status === 'flagged' || t.status === 'review');
   }, [txns]);
 
+  // Local helper to perform action and auto-advance queue
+  const handleAction = (action: string, tx: Transaction) => {
+    const currentIndex = triageQueue.findIndex(t => t.id === tx.id);
+    const remainingQueue = triageQueue.filter(t => t.id !== tx.id);
+    let nextTx: Transaction | null = null;
+    if (remainingQueue.length > 0) {
+      const nextIndex = Math.min(currentIndex >= 0 ? currentIndex : 0, remainingQueue.length - 1);
+      nextTx = remainingQueue[nextIndex];
+    }
+    onAction(action, tx);
+    setSelectedTx(nextTx);
+  };
+
   // 2. Currently selected transaction state
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
@@ -676,7 +689,7 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
     setEscalatedReports(prev => [report, ...prev]);
     setIsEscalationFormOpen(false);
     setSidebarTab('escalated');
-    onAction("escalate", activeTx);
+    handleAction("escalate", activeTx);
   };
 
   const handleDownloadPDF = (report: EscalatedReport) => {
@@ -958,12 +971,12 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
         if (key === 'A') {
           e.preventDefault();
           if (activeTx) {
-            onAction("clear", activeTx);
+            handleAction("clear", activeTx);
           }
         } else if (key === 'B') {
           e.preventDefault();
           if (activeTx) {
-            onAction("block", activeTx);
+            handleAction("block", activeTx);
           }
         } else if (key === 'E') {
           e.preventDefault();
@@ -982,7 +995,7 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [activeTx, onAction]);
+  }, [activeTx, handleAction]);
 
   // Initialize/Reset chat when transaction changes
   useEffect(() => {
@@ -1716,7 +1729,7 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
               <div className="aip-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, paddingBottom: 6 }}>
                 <button 
                   className={`act-btn danger ${activeTx.status === 'blocked' ? 'active' : ''}`} 
-                  onClick={() => onAction("block", activeTx)}
+                  onClick={() => handleAction("block", activeTx)}
                   style={{ opacity: activeTx.status === 'blocked' ? 1 : 0.8 }}
                   title="Block Transaction (Alt+Shift+B)"
                 >
@@ -1724,7 +1737,7 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                 </button>
                 <button 
                   className={`act-btn ok ${activeTx.status === 'cleared' ? 'active' : ''}`} 
-                  onClick={() => onAction("clear", activeTx)}
+                  onClick={() => handleAction("clear", activeTx)}
                   style={{ opacity: activeTx.status === 'cleared' ? 1 : 0.8 }}
                   title="Approve Transaction (Alt+Shift+A)"
                 >
@@ -1746,7 +1759,7 @@ export function AIHub({ txns, initialSelectedTx, onAction, currentUser }: AIHubP
                 </button>
                 <button 
                   className={`act-btn ${activeTx.status === 'false_positive' ? 'active' : ''}`} 
-                  onClick={() => onAction("false_positive", activeTx)}
+                  onClick={() => handleAction("false_positive", activeTx)}
                   style={{ opacity: activeTx.status === 'false_positive' ? 1 : 0.8 }}
                 >
                   <Icon name="close" size={14} /> FP Flag

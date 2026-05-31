@@ -43,7 +43,7 @@ const ACTION_META: Record<string, { label: string; icon: string; c: string }> = 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ username: string } | null>(() => {
     try {
-      const saved = localStorage.getItem('fh_current_user');
+      const saved = sessionStorage.getItem('fh_current_user');
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
       return null;
@@ -153,7 +153,7 @@ export default function App() {
       card: tx.card,
       action,
       score: tx.score,
-      by: currentUser?.username || 'Lucas Matkovski',
+      by: currentUser?.username || 'Admin',
     };
 
     showToast(`${tx.id} — ${ACTION_META[action]?.label ?? 'Updated'}`, ACTION_META[action]?.icon ?? 'check', ACTION_META[action]?.c ?? 'var(--low)');
@@ -187,7 +187,7 @@ export default function App() {
       <>
         <LoginView onLoginSuccess={(u) => {
           setCurrentUser(u);
-          localStorage.setItem('fh_current_user', JSON.stringify(u));
+          sessionStorage.setItem('fh_current_user', JSON.stringify(u));
           showToast('Welcome back, ' + u.username, 'check', 'var(--low)');
         }} />
         {toast && (
@@ -273,11 +273,13 @@ export default function App() {
           <div className="icon-btn" onClick={toggleCollapsed} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} style={{ flexShrink: 0 }}>
             <Icon name="panelLeft" size={18} />
           </div>
-          
+          {/*
           <div className="search">
             <Icon name="search" size={15} />
             <input placeholder="Search transactions, cards, device IPs..." />
           </div>
+
+          */}
 
           <div className="topbar-right">
             <div className="updated"><Icon name="refresh" size={13} /> Updated {updated}</div>
