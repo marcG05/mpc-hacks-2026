@@ -42,3 +42,15 @@ Password: `1234`
 
 
 Note: In PowerShell, set env vars like `$env:PY_ENGINE_PORT=3001` before running commands.
+
+
+Detection strategy:  
+   
+    1. Feature engineering (velocity, cross‑border, night activity, high‑risk category, device/IP sharing, spending patterns).  
+    2. Rule‑based scoring with weighted heuristics to flag known fraud patterns.  
+    3. Anomaly detection (Isolation Forest) to catch outliers beyond the rules.  
+    4. Ensemble verdict that combines rule and anomaly signals into a single fraud score and thresholded verdict.
+With another week:  
+   1. Add labeled data and evaluate precision/recall/F1; tune weights and thresholds.  
+   2. Expand signals (geolocation from IP, merchant risk scoring, cardholder behavior baselines).  
+   3. Calibrate explanations (top contributing rules per decision) and improve the UI to drill into why a transaction was flagged.
