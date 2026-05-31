@@ -8,6 +8,11 @@ The pipeline:
 5. Combines both signals into a final fraud verdict.
 """
 
+import copy
+import json
+import os
+import re
+
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
@@ -15,6 +20,138 @@ import warnings
 import socketserver
 
 warnings.filterwarnings("ignore")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 0. Dynamic Engine Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+_DEFAULT_CONFIG = {
+    "weights": {
+        "flag_amount_zscore":     1.0,
+        "flag_extreme_zscore":    1.5,
+        "flag_high_amount":       1.0,
+        "flag_night_tx":          0.5,
+        "flag_cross_border":      0.5,
+        "flag_high_risk_cat":     1.0,
+        "flag_high_velocity":     1.5,
+        "flag_burst":             2.5,
+        "gift_card_spree":        2.5,
+        "electronics_spree":      2.0,
+        "flag_round_amount":      0.3,
+        "flag_many_merchants":    0.5,
+        "flag_device_multi":      2.0,
+        "flag_ip_multi":          1.5,
+        "is_test_charge_pattern": 2.0,
+    },
+    "descriptions": {
+        "flag_high_amount":
+            "Purchase amount (${amount}) is significantly higher "
+            "than this card's usual spending (${card_mean_amount} average).",
+        "flag_amount_zscore":
+            "Transaction amount is highly unusual for this card "
+            "(${amount_zscore} standard deviations from normal spending).",
+        "flag_night_tx":
+            "Transaction occurred during overnight hours "
+            "(${hour}:00), when this type of activity is less common.",
+        "flag_cross_border":
+            "Purchase was made in ${merchant_country}, while the cardholder is based in "
+            "${cardholder_country}.",
+        "flag_high_velocity":
+            "High transaction activity detected: "
+            "${velocity_1h} other transactions were made on this card within the last hour.",
+        "flag_burst":
+            "Multiple purchases were made in quick succession "
+            "(${velocity_burst} transactions within 15 minutes).",
+        "flag_high_risk_cat":
+            "Purchase was made with a merchant in a higher-risk category "
+            "(${merchant_category}).",
+        "gift_card_spree":
+            "Multiple gift card purchases detected within the last 24 hours.",
+        "electronics_spree":
+            "Multiple electronics purchases detected within the last 24 hours.",
+        "flag_round_amount":
+            "Transaction amount is an exact round value (${amount}).",
+        "flag_many_merchants":
+            "This card has been used at an unusually large number of different merchants recently.",
+        "flag_device_multi":
+            "Device ${device_id} has been associated with multiple payment cards.",
+        "flag_ip_multi":
+            "IP address ${ip_address} has been associated with multiple payment cards.",
+        "is_test_charge_pattern":
+            "Possible card-testing behavior detected: a small transaction "
+            "(${prev_amount}) was followed by a larger charge "
+            "(${amount}).",
+    },
+    "ensemble": {
+        "rule_weight": 0.6,
+        "if_weight":   0.4,
+    },
+    "thresholds": {
+        "suspicious": 0.30,
+        "fraud":      0.50,
+    },
+}
+
+# Live mutable config — mutated at runtime by the config TCP server
+ENGINE_CONFIG = copy.deepcopy(_DEFAULT_CONFIG)
+
+
+def _render_template(template: str, row) -> str:
+    """Replace ${field} placeholders with values from a DataFrame row."""
+    def _replacer(match):
+        field = match.group(1)
+        val = row.get(field, match.group(0))
+        if isinstance(val, float):
+            return f"{val:.2f}"
+        return str(val)
+    return re.sub(r"\$\{(\w+)\}", _replacer, template)
+
+
+def get_config() -> dict:
+    """Return a deep copy of the current engine config."""
+    return copy.deepcopy(ENGINE_CONFIG)
+
+
+def get_default_config() -> dict:
+    """Return a deep copy of the factory-default config."""
+    return copy.deepcopy(_DEFAULT_CONFIG)
+
+
+def set_config(data: dict) -> dict:
+    """Merge *data* into ENGINE_CONFIG and return the updated config."""
+    global ENGINE_CONFIG
+    for section in ("weights", "descriptions", "ensemble", "thresholds"):
+        if section in data:
+            ENGINE_CONFIG.setdefault(section, {})
+            ENGINE_CONFIG[section].update(data[section])
+    return get_config()
+
+
+def load_config(path: str) -> bool:
+    """Load config from a JSON file. Returns True on success."""
+    if not os.path.isfile(path):
+        return False
+    try:
+        with open(path, "r") as f:
+            data = json.load(f)
+        set_config(data)
+        print(f"[CONFIG] Loaded config from {path}")
+        return True
+    except Exception as e:
+        print(f"[CONFIG] Failed to load {path}: {e}")
+        return False
+
+
+def save_config(path: str) -> bool:
+    """Persist current ENGINE_CONFIG to a JSON file."""
+    try:
+        with open(path, "w") as f:
+            json.dump(ENGINE_CONFIG, f, indent=2)
+        print(f"[CONFIG] Saved config to {path}")
+        return True
+    except Exception as e:
+        print(f"[CONFIG] Failed to save {path}: {e}")
+        return False
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Load data
@@ -185,119 +322,26 @@ def score_rules(df):
     df["flag_ip_multi"] = df["ip_multi_card"]
     df["flag_many_merchants"] = df["many_merchants"]
 
-    # ── Weighted rule score ──
-    weights = {
-        "flag_amount_zscore":     1.0,   # Unusual amount for this card
-        "flag_extreme_zscore":    1.5,   # Extreme outlier (additional on top)
-        "flag_high_amount":       1.0,   # High absolute value
-        "flag_night_tx":          0.5,   # Night-time transaction
-        "flag_cross_border":      0.5,   # Cross-border
-        "flag_high_risk_cat":     1.0,   # Electronics / gift card / travel
-        "flag_high_velocity":     1.5,   # ≥3 txns in 1 hour
-        "flag_burst":             2.5,   # ≥4 txns in 15 minutes (card testing)
-        "gift_card_spree":        2.5,   # ≥2 gift card purchases in 24h
-        "electronics_spree":      2.0,   # ≥2 electronics purchases in 24h
-        "flag_round_amount":      0.3,   # Suspiciously round amount
-        "flag_many_merchants":    0.5,   # Many distinct merchants
-        "flag_device_multi":      2.0,   # Shared device (rare but strong)
-        "flag_ip_multi":          1.5,   # Shared IP
-        "is_test_charge_pattern": 2.0,   # Small → large charge
-    }
+    # ── Weighted rule score (reads from ENGINE_CONFIG) ──
+    weights = ENGINE_CONFIG["weights"]
 
     score = np.zeros(len(df))
     for flag, weight in weights.items():
-        score += df[flag].values * weight
+        if flag in df.columns:
+            score += df[flag].values * weight
 
     df["rule_score"] = score
 
-    trigger_descriptions = {
-        "flag_high_amount":
-            lambda r: (
-                f"Purchase amount (${r['amount']:.2f}) is significantly higher "
-                f"than this card's usual spending (${r['card_mean_amount']:.2f} average)."
-            ),
-
-        "flag_amount_zscore":
-            lambda r: (
-                f"Transaction amount is highly unusual for this card "
-                f"({r['amount_zscore']:.1f} standard deviations from normal spending)."
-            ),
-
-        "flag_night_tx":
-            lambda r: (
-                f"Transaction occurred during overnight hours "
-                f"({r['hour']:02d}:00), when this type of activity is less common."
-            ),
-
-        "flag_cross_border":
-            lambda r: (
-                f"Purchase was made in {r['merchant_country']}, while the cardholder is based in "
-                f"{r['cardholder_country']}."
-            ),
-
-        "flag_high_velocity":
-            lambda r: (
-                f"High transaction activity detected: "
-                f"{int(r['velocity_1h'])} other transactions were made on this card within the last hour."
-            ),
-
-        "flag_burst":
-            lambda r: (
-                f"Multiple purchases were made in quick succession "
-                f"({int(r['velocity_burst']) + 1} transactions within 15 minutes)."
-            ),
-
-        "flag_high_risk_cat":
-            lambda r: (
-                f"Purchase was made with a merchant in a higher-risk category "
-                f"({r['merchant_category']})."
-            ),
-
-        "gift_card_spree":
-            lambda r: (
-                "Multiple gift card purchases detected within the last 24 hours."
-            ),
-
-        "electronics_spree":
-            lambda r: (
-                "Multiple electronics purchases detected within the last 24 hours."
-            ),
-
-        "flag_round_amount":
-            lambda r: (
-                f"Transaction amount is an exact round value (${r['amount']:.2f})."
-            ),
-
-        "flag_many_merchants":
-            lambda r: (
-                "This card has been used at an unusually large number of different merchants recently."
-            ),
-
-        "flag_device_multi":
-            lambda r: (
-                f"Device {r['device_id']} has been associated with multiple payment cards."
-            ),
-
-        "flag_ip_multi":
-            lambda r: (
-                f"IP address {r['ip_address']} has been associated with multiple payment cards."
-            ),
-
-        "is_test_charge_pattern":
-            lambda r: (
-                f"Possible card-testing behavior detected: a small transaction "
-                f"(${r['prev_amount']:.2f}) was followed by a larger charge "
-                f"(${r['amount']:.2f})."
-            ),
-    }
+    # ── Human-readable trigger descriptions (reads from ENGINE_CONFIG) ──
+    descriptions = ENGINE_CONFIG["descriptions"]
 
     triggers_list = []
     for _, row in df.iterrows():
         parts = []
-        for flag, desc_fn in trigger_descriptions.items():
+        for flag, template in descriptions.items():
             if row.get(flag, 0) > 0:
                 try:
-                    parts.append(desc_fn(row))
+                    parts.append(_render_template(template, row))
                 except Exception:
                     parts.append(flag)
         triggers_list.append(" | ".join(parts) if parts else "")
@@ -355,18 +399,20 @@ def ensemble_verdict(df):
     else:
         df["rule_score_norm"] = 0.0
 
-    # Weighted ensemble: rules dominate, IF supplements
-    RULE_WEIGHT = 0.6
-    IF_WEIGHT = 0.4
+    # Weighted ensemble (reads from ENGINE_CONFIG)
+    rule_w = ENGINE_CONFIG["ensemble"]["rule_weight"]
+    if_w   = ENGINE_CONFIG["ensemble"]["if_weight"]
     df["fraud_score"] = (
-        RULE_WEIGHT * df["rule_score_norm"]
-        + IF_WEIGHT * df["if_score_norm"]
+        rule_w * df["rule_score_norm"]
+        + if_w * df["if_score_norm"]
     )
 
-    # Verdict cutoffs
+    # Verdict cutoffs (reads from ENGINE_CONFIG)
+    sus_thresh   = ENGINE_CONFIG["thresholds"]["suspicious"]
+    fraud_thresh = ENGINE_CONFIG["thresholds"]["fraud"]
     df["fraud_verdict"] = pd.cut(
         df["fraud_score"],
-        bins=[-np.inf, 0.30, 0.50, np.inf],
+        bins=[-np.inf, sus_thresh, fraud_thresh, np.inf],
         labels=["LEGITIMATE", "SUSPICIOUS", "FRAUD"],
     )
 

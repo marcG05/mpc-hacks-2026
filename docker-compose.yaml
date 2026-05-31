@@ -37,3 +37,18 @@ services:
     container_name: engine
     volumes:
       - ./python:/app
+
+  tuner:
+    build:
+      context: ./tuner
+      dockerfile: Dockerfile.dev
+    container_name: tuner
+    ports:
+      - "5555:5555"
+    volumes:
+      - ./tuner:/app
+    environment:
+      ENGINE_HOST: engine
+      ENGINE_CONFIG_PORT: "3002"
+    depends_on:
+      - engine
