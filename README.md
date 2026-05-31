@@ -12,11 +12,12 @@
    - `npm install`
    - `PY_ENGINE_HOST=127.0.0.1` (optional, default `127.0.0.1`)
    - `PY_ENGINE_PORT=3001` (optional, default `3001`)
+   - `MAP=MAPBOX_API_KEY`
+   - `gemapikey=GEMINI_API_KEY`
    - `npm run start:dev`
 3. Start the frontend:
    - `cd frontend`
    - `npm install`
-   - `VITE_API_URL=http://localhost:3000`
    - `npm run dev`
 
 Health check: `GET http://localhost:3000/engine/health`
