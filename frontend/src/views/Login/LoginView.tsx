@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '../../components';
 import { loginUser } from '../../services/api';
+import falconLogo from '../../assets/falcon.svg';
 
 interface LoginViewProps {
   onLoginSuccess: (user: { username: string }) => void;
@@ -46,7 +47,7 @@ export function LoginView({ onLoginSuccess }: LoginViewProps) {
       <div className="login-card glass-panel">
         <div className="login-header">
           <div className="login-brand-mark">
-            <Icon name="shield" size={24} style={{ color: '#fff' }} />
+            <img src={falconLogo} alt="Falcon Logo" style={{ width: 24, height: 24 }} />
           </div>
           <h1 className="login-title">Falcon</h1>
           <p className="login-subtitle">Risk Operations Console</p>

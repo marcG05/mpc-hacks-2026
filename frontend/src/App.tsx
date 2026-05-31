@@ -18,6 +18,7 @@ import {
   fetchHealth
 } from './services/api';
 import './styles.css';
+import falconLogo from './assets/falcon.svg';
 
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: 'grid' },
@@ -202,7 +203,7 @@ export default function App() {
         {/* Brand mark — click to collapse */}
         <div className="brand" onClick={toggleCollapsed} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
           <div className="brand-mark">
-            <Icon name="shield" size={16} style={{ color: '#fff' }} />
+            <img src={falconLogo} alt="Falcon Logo" style={{ width: 16, height: 16 }} />
           </div>
           <div className="brand-text">
             <div className="brand-name">Falcon</div>

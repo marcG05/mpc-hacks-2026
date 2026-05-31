@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Icon } from '../../components';
+import falconLogo from '../../assets/falcon.svg';
 import type { Transaction, Metrics } from '../../types';
-import heroImage from '../../assets/abstract_hero.png';
 
 interface WelcomeDashboardProps {
   txns: Transaction[];
@@ -267,72 +267,64 @@ export function WelcomeDashboard({ txns, metrics, onNavigate, onImportClick, cur
           </div>
         </div>
 
-        {/* ── Right column: Hero image ──────────────────── */}
+        {/* ── Right column: Falcon logo showcase ──────────────────── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div
             style={{
               position: 'relative',
               width: '100%',
+              height: 380,
               maxWidth: 420,
               borderRadius: 'var(--radius-lg)',
               overflow: 'hidden',
               border: '1px solid var(--border)',
+              background: 'radial-gradient(circle at 50% 50%, #252433 0%, #111017 100%)',
               boxShadow: '0 24px 60px rgba(15,23,42,0.14)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <img
-              src={heroImage}
-              alt="Premium abstract digital flow graphic"
-              style={{ width: '100%', display: 'block', objectFit: 'cover' }}
-            />
 
-            {/* Glassmorphic overlay tag */}
+            {/* Large glowing Falcon logo */}
             <div
               style={{
-                position: 'absolute',
-                bottom: 16,
-                left: 16,
-                right: 16,
-                padding: '11px 16px',
-                background: 'rgba(255,255,255,0.82)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.5)',
-                borderRadius: 'var(--radius)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
+                position: 'relative',
+                display: 'grid',
+                placeItems: 'center',
+                width: 140,
+                height: 140,
+                borderRadius: '35px',
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                boxShadow: 'inset 0 0 20px rgba(255, 85, 85, 0.08), 0 10px 40px rgba(0, 0, 0, 0.3)',
+                marginBottom: 28,
               }}
             >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
-                  Falcon Isolation Engine
-                </div>
-                <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 1 }}>
-                  15 Deterministic Rules · Active Scan
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: 'var(--low)',
-                    boxShadow: '0 0 6px var(--low)',
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: 10.5,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    color: 'var(--text-2)',
-                  }}
-                >
-                  Active
-                </span>
-              </div>
+              {/* Soft glow background */}
+              <div
+                style={{
+                  position: 'absolute',
+                  width: 100,
+                  height: 100,
+                  borderRadius: '50%',
+                  background: 'rgba(255, 85, 85, 0.12)',
+                  filter: 'blur(24px)',
+                  zIndex: 0,
+                }}
+              />
+              <img
+                src={falconLogo}
+                alt="Falcon Logo"
+                style={{
+                  width: 80,
+                  height: 80,
+                  position: 'relative',
+                  zIndex: 1,
+                  filter: 'drop-shadow(0 4px 12px rgba(255, 85, 85, 0.4))',
+                }}
+              />
             </div>
           </div>
         </div>
