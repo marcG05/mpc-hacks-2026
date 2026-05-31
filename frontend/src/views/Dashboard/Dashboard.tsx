@@ -8,11 +8,12 @@ import { DashboardRightRail } from './DashboardRightRail';
 
 interface DashboardProps {
   txns: Transaction[];
+  metrics?: any;
   selectedId: string | null;
   onSelect: (tx: Transaction) => void;
 }
 
-export function Dashboard({ txns, selectedId, onSelect }: DashboardProps) {
+export function Dashboard({ txns, metrics, selectedId, onSelect }: DashboardProps) {
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
 
@@ -59,7 +60,7 @@ export function Dashboard({ txns, selectedId, onSelect }: DashboardProps) {
         </div>
       </div>
 
-      <DashboardMetrics counts={counts} atRisk={atRisk} confirmed={confirmed} fpRate={fpRate} />
+      <DashboardMetrics counts={counts} atRisk={atRisk} confirmed={confirmed} fpRate={fpRate} metrics={metrics} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 296px", gap: 16, alignItems: "start" }}>
         <DashboardTable 
@@ -68,7 +69,7 @@ export function Dashboard({ txns, selectedId, onSelect }: DashboardProps) {
           counts={counts as any} rows={rows} 
           selectedId={selectedId} onSelect={onSelect} 
         />
-        <DashboardRightRail />
+        <DashboardRightRail metrics={metrics} counts={counts as any} txns={txns} />
       </div>
     </div>
   );

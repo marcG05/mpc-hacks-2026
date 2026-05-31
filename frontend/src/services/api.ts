@@ -46,6 +46,10 @@ export async function fetchDecisions(): Promise<LogEntry[]> {
   return request('/decisions');
 }
 
+export async function fetchHealth(): Promise<{ status: string; engine: string }> {
+  return request('/health');
+}
+
 export async function fetchMetrics(): Promise<Metrics> {
   return request('/metrics');
 }

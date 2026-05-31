@@ -52,7 +52,21 @@ export class EngineService {
                 if (r.triggers) {
                   const parts = r.triggers.split(' | ');
                   parts.forEach((p: string, i: number) => {
-                    signals.push({ key: `sig-${i}`, name: 'Risk Trigger', detail: p, weight: 1, color: 'high', icon: 'flag' });
+                    let name = 'Risk Trigger';
+                    let icon = 'flag';
+                    let color = 'high';
+                    
+                    if (p.includes('Amount')) { name = 'Amount Anomaly'; icon = 'trend'; color = 'critical'; }
+                    else if (p.includes('Cross-border')) { name = 'Geographic Mismatch'; icon = 'globe'; }
+                    else if (p.includes('other txns') || p.includes('Burst') || p.includes('Velocity')) { name = 'Velocity Spike'; icon = 'bolt'; color = 'critical'; }
+                    else if (p.includes('High-risk category')) { name = 'High-risk Category'; icon = 'tag'; }
+                    else if (p.includes('spree')) { name = 'Targeted Spree'; icon = 'shopping-bag'; color = 'critical'; }
+                    else if (p.includes('Device')) { name = 'Device Reuse'; icon = 'device'; color = 'critical'; }
+                    else if (p.includes('IP ')) { name = 'Shared IP Address'; icon = 'network'; color = 'critical'; }
+                    else if (p.includes('Test-charge') || p.includes('Round amount') || p.includes('merchants')) { name = 'Card-Testing Pattern'; icon = 'probe'; color = 'critical'; }
+                    else if (p.includes('night window') || p.includes('unusual_hour')) { name = 'Off-hours Activity'; icon = 'clock'; }
+
+                    signals.push({ key: `sig-${i}`, name, detail: p, weight: 1, color, icon });
                   });
                 }
 
@@ -90,6 +104,13 @@ export class EngineService {
               });
 
               this.transactions = mappedRows;
+
+              if (resultJson.metrics) {
+                this.metrics = { available: true, ...resultJson.metrics };
+              } else {
+                this.metrics = { available: false };
+              }
+
               resolve(mappedRows);
             } else {
               reject(new InternalServerErrorException(resultJson.error || 'Engine processing failed'));

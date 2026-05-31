@@ -4,7 +4,7 @@ import { Icon } from './components';
 import { Dashboard, ReviewQueue, DecisionLog, Upload } from './views';
 import { AIPanel } from './features/AIPanel';
 import type { Transaction, LogEntry, Metrics } from './types';
-import { analyzeTransactions, fetchTransactions, fetchDecisions, fetchMetrics, recordDecision } from './services/api';
+import { analyzeTransactions, fetchTransactions, fetchDecisions, fetchMetrics, recordDecision, fetchHealth } from './services/api';
 import './styles.css';
 
 const NAV = [
@@ -41,6 +41,19 @@ export default function App() {
       return false;
     }
   });
+  const [engineStatus, setEngineStatus] = useState<'online' | 'offline' | 'checking'>('checking');
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetchHealth();
+        setEngineStatus(res.engine === 'online' ? 'online' : 'offline');
+      } catch (e) {
+        setEngineStatus('offline');
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -169,11 +182,16 @@ export default function App() {
         <div style={{ marginTop: 'auto' }} className="engine-card">
           <div className="card" style={{ padding: 13 }}>
             <div className="flex" style={{ alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span className="dot" style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--low)', boxShadow: '0 0 8px var(--low)' }}></span>
-              <span style={{ fontSize: 12, fontWeight: 600 }}>Engine online</span>
+              <span className="dot" style={{ width: 7, height: 7, borderRadius: 99, background: engineStatus === 'online' ? 'var(--low)' : engineStatus === 'checking' ? 'var(--accent)' : 'var(--critical)', boxShadow: `0 0 8px ${engineStatus === 'online' ? 'var(--low)' : engineStatus === 'checking' ? 'var(--accent)' : 'var(--critical)'}` }}></span>
+              <span style={{ fontSize: 12, fontWeight: 600 }}>{engineStatus === 'online' ? 'Engine online' : engineStatus === 'checking' ? 'Checking engine...' : 'Engine offline'}</span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.5 }}>
-              {txns.length} txns scanned · F1 <span className="mono" style={{ color: 'var(--low)' }}>0.87</span>
+              {txns.length} txns scanned
+              {metrics?.f1 !== undefined ? (
+                <> · F1 <span className="mono" style={{ color: 'var(--low)' }}>{metrics.f1.toFixed(2)}</span></>
+              ) : (
+                <> · <span className="mono" style={{ color: 'var(--text-4)' }}>No metrics</span></>
+              )}
             </div>
           </div>
         </div>
@@ -198,7 +216,7 @@ export default function App() {
           </div>
         </header>
 
-        {route === 'dashboard' && <Dashboard txns={txns} selectedId={panelOpen ? (selectedLive && selectedLive.id) : null} onSelect={openPanel} />}
+        {route === 'dashboard' && <Dashboard txns={txns} metrics={metrics} selectedId={panelOpen ? (selectedLive && selectedLive.id) : null} onSelect={openPanel} />}
         {route === 'review' && <ReviewQueue txns={txns} metrics={metrics} onAction={applyAction} onOpenPanel={openPanel} />}
         {route === 'log' && <DecisionLog log={log} />}
         {route === 'upload' && <Upload onAnalyze={handleAnalyze} />}

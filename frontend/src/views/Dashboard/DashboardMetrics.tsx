@@ -1,24 +1,22 @@
 import { MetricCard } from '../../components';
 import { FRAUD } from '../../data';
+import type { Metrics } from '../../types';
 
 interface DashboardMetricsProps {
   counts: { open: number };
   atRisk: number;
   confirmed: number;
   fpRate: number;
+  metrics?: Metrics | null;
 }
 
-export function DashboardMetrics({ counts, atRisk, confirmed, fpRate }: DashboardMetricsProps) {
+export function DashboardMetrics({ counts, atRisk, metrics }: DashboardMetricsProps) {
   return (
     <div className="metrics">
-      <MetricCard label="Flagged today" value={counts.open} icon="flag"
-        delta="+8 (24h)" deltaDir="up" sparkColor="var(--critical)" sparkPct={72} />
-      <MetricCard label="Amount at risk" value={FRAUD.money(atRisk).replace(".00", "")} icon="trend"
-        delta="+12% (24h)" deltaDir="up" sparkColor="var(--high)" sparkPct={64} />
-      <MetricCard label="Confirmed fraud" value={confirmed} icon="shield"
-        delta="−3 (24h)" deltaDir="down" sparkColor="var(--violet)" sparkPct={38} />
-      <MetricCard label="False-positive rate" value={fpRate + "%"} icon="check"
-        delta="−2% (24h)" deltaDir="down" sparkColor="var(--low)" sparkPct={20} />
+      <MetricCard label="Flagged today" value={counts.open} icon="flag" />
+      <MetricCard label="Amount at risk" value={FRAUD.money(atRisk).replace(".00", "")} icon="trend" />
+      <MetricCard label="Engine F1 Score" value={metrics?.f1 !== undefined ? metrics.f1.toFixed(3) : "—"} icon="sparkle" />
+      <MetricCard label="Engine Precision" value={metrics?.precision !== undefined ? metrics.precision.toFixed(3) : "—"} icon="check" />
     </div>
   );
 }
