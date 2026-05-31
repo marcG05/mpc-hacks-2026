@@ -210,22 +210,85 @@ def score_rules(df):
 
     df["rule_score"] = score
 
-    # ── Build human-readable trigger strings ──
     trigger_descriptions = {
-        "flag_high_amount":       lambda r: f"Amount ${r['amount']:.2f} >> card avg ${r['card_mean_amount']:.2f} (+{r['amount'] - r['card_mean_amount']:.2f})",
-        "flag_amount_zscore":     lambda r: f"Amount Z-score {r['amount_zscore']:.1f}σ (threshold: ±3σ)",
-        "flag_night_tx":          lambda r: f"Transaction at {r['hour']:02d}:00 (night window 00–05)",
-        "flag_cross_border":      lambda r: f"Cross-border: cardholder {r['cardholder_country']} → merchant {r['merchant_country']}",
-        "flag_high_velocity":     lambda r: f"{int(r['velocity_1h'])} other txns on this card in the preceding hour",
-        "flag_burst":             lambda r: f"Burst: {int(r['velocity_burst'])+1} txns within 15 minutes (card testing pattern)",
-        "flag_high_risk_cat":     lambda r: f"High-risk category: {r['merchant_category']}",
-        "gift_card_spree":        lambda r: "Gift card liquidation spree (≥2 gift cards in 24h)",
-        "electronics_spree":      lambda r: "Electronics buying spree (≥2 electronics purchases in 24h)",
-        "flag_round_amount":      lambda r: f"Round amount (${r['amount']:.2f})",
-        "flag_many_merchants":    lambda r: "Card used at unusually many distinct merchants",
-        "flag_device_multi":      lambda r: f"Device {r['device_id']} linked to multiple cards",
-        "flag_ip_multi":          lambda r: f"IP {r['ip_address']} linked to multiple cards",
-        "is_test_charge_pattern": lambda r: f"Test-charge pattern: previous ${r['prev_amount']:.2f} → current ${r['amount']:.2f}",
+        "flag_high_amount":
+            lambda r: (
+                f"Purchase amount (${r['amount']:.2f}) is significantly higher "
+                f"than this card's usual spending (${r['card_mean_amount']:.2f} average)."
+            ),
+
+        "flag_amount_zscore":
+            lambda r: (
+                f"Transaction amount is highly unusual for this card "
+                f"({r['amount_zscore']:.1f} standard deviations from normal spending)."
+            ),
+
+        "flag_night_tx":
+            lambda r: (
+                f"Transaction occurred during overnight hours "
+                f"({r['hour']:02d}:00), when this type of activity is less common."
+            ),
+
+        "flag_cross_border":
+            lambda r: (
+                f"Purchase was made in {r['merchant_country']}, while the cardholder is based in "
+                f"{r['cardholder_country']}."
+            ),
+
+        "flag_high_velocity":
+            lambda r: (
+                f"High transaction activity detected: "
+                f"{int(r['velocity_1h'])} other transactions were made on this card within the last hour."
+            ),
+
+        "flag_burst":
+            lambda r: (
+                f"Multiple purchases were made in quick succession "
+                f"({int(r['velocity_burst']) + 1} transactions within 15 minutes)."
+            ),
+
+        "flag_high_risk_cat":
+            lambda r: (
+                f"Purchase was made with a merchant in a higher-risk category "
+                f"({r['merchant_category']})."
+            ),
+
+        "gift_card_spree":
+            lambda r: (
+                "Multiple gift card purchases detected within the last 24 hours."
+            ),
+
+        "electronics_spree":
+            lambda r: (
+                "Multiple electronics purchases detected within the last 24 hours."
+            ),
+
+        "flag_round_amount":
+            lambda r: (
+                f"Transaction amount is an exact round value (${r['amount']:.2f})."
+            ),
+
+        "flag_many_merchants":
+            lambda r: (
+                "This card has been used at an unusually large number of different merchants recently."
+            ),
+
+        "flag_device_multi":
+            lambda r: (
+                f"Device {r['device_id']} has been associated with multiple payment cards."
+            ),
+
+        "flag_ip_multi":
+            lambda r: (
+                f"IP address {r['ip_address']} has been associated with multiple payment cards."
+            ),
+
+        "is_test_charge_pattern":
+            lambda r: (
+                f"Possible card-testing behavior detected: a small transaction "
+                f"(${r['prev_amount']:.2f}) was followed by a larger charge "
+                f"(${r['amount']:.2f})."
+            ),
     }
 
     triggers_list = []
