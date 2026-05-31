@@ -858,7 +858,8 @@ body {
    ============================================================ */
 .upload-stage { height: 100%; display: grid; place-items: center; }
 .dropzone {
-  width: 500px;
+  width: 100%;
+  max-width: 480px;
   padding: 52px 40px;
   border-radius: var(--radius-lg);
   border: 1.5px dashed var(--border-2);

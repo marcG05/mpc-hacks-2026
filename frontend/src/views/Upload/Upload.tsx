@@ -30,8 +30,8 @@ export function Upload({ onAnalyze }: UploadProps) {
   }
 
   return (
-    <div className="content" style={{overflow: "hidden"}}>
-      <div className="upload-stage">
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+      <div className="upload-stage" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
         {!running ? (
           <div>
             <input
