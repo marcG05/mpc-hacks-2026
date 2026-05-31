@@ -2,15 +2,21 @@ import { useState, useMemo } from 'react';
 import { Icon, ScoreBar, StatusPill } from '../../components';
 import { FRAUD } from '../../data';
 import type { Transaction } from '../../types';
+import { TransactionDrawer } from './TransactionDrawer';
 
 interface TransactionLogProps {
   txns: Transaction[];
   onSelect: (tx: Transaction) => void;
+  onAction?: (action: string, tx: Transaction) => void;
+  currentUser?: { username: string } | null;
 }
 
 type SortCol = 'score' | 'amount' | 'id' | 'merchant' | 'status';
 
-export function TransactionLog({ txns, onSelect }: TransactionLogProps) {
+export function TransactionLog({ txns, onSelect, onAction, currentUser }: TransactionLogProps) {
+  // Drawer state
+  const [drawerTx, setDrawerTx] = useState<Transaction | null>(null);
+
   // Filters
   const [statusFilter, setStatusFilter] = useState('all');
   const [severityFilter, setSeverityFilter] = useState('all');
@@ -233,8 +239,8 @@ export function TransactionLog({ txns, onSelect }: TransactionLogProps) {
                 {rows.map((t) => (
                   <tr 
                     key={t.id} 
-                    onClick={() => onSelect(t)} 
-                    style={{ cursor: 'pointer' }}
+                    onClick={() => setDrawerTx(t)} 
+                    style={{ cursor: 'pointer', background: drawerTx?.id === t.id ? 'var(--accent-soft)' : undefined }}
                   >
                     <td><ScoreBar score={t.score} /></td>
                     <td>
@@ -251,15 +257,24 @@ export function TransactionLog({ txns, onSelect }: TransactionLogProps) {
                     </td>
                     <td><StatusPill status={t.status} /></td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      {/* Hover / inline micro action panel */}
                       <div className="flex" style={{ gap: 4, justifyContent: 'flex-end' }}>
+                        {/* Open drawer */}
                         <button 
                           className="icon-btn" 
-                          title="View in AI Hub" 
-                          onClick={() => onSelect(t)}
+                          title="Inspect in side panel" 
+                          onClick={() => setDrawerTx(t)}
                           style={{ width: 28, height: 28, color: 'var(--accent)' }}
                         >
                           <Icon name="sparkle" size={14} />
+                        </button>
+                        {/* Open full AI Hub */}
+                        <button 
+                          className="icon-btn" 
+                          title="Open in AI Hub" 
+                          onClick={() => onSelect(t)}
+                          style={{ width: 28, height: 28, color: 'var(--text-3)' }}
+                        >
+                          <Icon name="arrowUpRight" size={13} />
                         </button>
                       </div>
                     </td>
@@ -310,14 +325,25 @@ export function TransactionLog({ txns, onSelect }: TransactionLogProps) {
           </div>
           
           <div className="card" style={{ padding: 18, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', background: 'linear-gradient(135deg, rgba(77,139,240,0.03) 0%, rgba(77,139,240,0) 100%)' }}>
-            <Icon name="shield" size={40} style={{ margin: '0 auto 12px', color: 'var(--accent)', opacity: 0.5 }} />
-            <h4 style={{ margin: '0 0 6px', fontSize: 13.5, fontWeight: 600 }}>Interactive Review</h4>
+            <Icon name="sparkle" size={40} style={{ margin: '0 auto 12px', color: 'var(--accent)', opacity: 0.5 }} />
+            <h4 style={{ margin: '0 0 6px', fontSize: 13.5, fontWeight: 600 }}>Quick Inspect</h4>
             <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
-              Click on any row in the log to activate the AI Investigation Hub and review risk indicators in detail.
+              Click any row to open the side panel with signals, geolocation, card info, and AI Copilot — without leaving this view.
             </p>
           </div>
         </div>
       </div>
+
+      {/* Transaction side-panel drawer */}
+      <TransactionDrawer
+        tx={drawerTx}
+        onClose={() => setDrawerTx(null)}
+        onAction={(action, tx) => {
+          onAction?.(action, tx);
+          // Keep drawer open so user can see status change
+        }}
+        currentUser={currentUser}
+      />
     </div>
   );
 }

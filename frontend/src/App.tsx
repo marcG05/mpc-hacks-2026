@@ -292,9 +292,11 @@ export default function App() {
           />
         )}
         {route === 'transactions' && (
-          <TransactionLog 
+        <TransactionLog 
             txns={txns} 
-            onSelect={(tx) => handleNavigate('hub', tx)} 
+            onSelect={(tx) => handleNavigate('hub', tx)}
+            onAction={applyAction}
+            currentUser={currentUser}
           />
         )}
         {route === 'hub' && (
