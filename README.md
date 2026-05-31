@@ -21,4 +21,9 @@
 
 Health check: `GET http://localhost:3000/engine/health`
 
+## General setup
+
+You can use the docker compose file instead with the command:
+`docker compose up -d --build`
+
 Note: In PowerShell, set env vars like `$env:PY_ENGINE_PORT=3001` before running commands.
