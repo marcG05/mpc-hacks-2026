@@ -5,8 +5,6 @@ import {
   WelcomeDashboard, 
   TransactionLog, 
   AIHub, 
-  Resources, 
-  Settings, 
   Upload,
   LoginView
 } from './views';
@@ -251,7 +249,6 @@ export default function App() {
         {/* User profile details */}
         <div 
           className="nav-item" 
-          onClick={() => handleNavigate('settings')}
           style={{ cursor: 'pointer' }} 
           title={collapsed ? currentUser.username : undefined}
         >
@@ -306,12 +303,6 @@ export default function App() {
             onAction={applyAction} 
             currentUser={currentUser}
           />
-        )}
-        {route === 'resources' && (
-          <Resources />
-        )}
-        {route === 'settings' && (
-          <Settings currentUser={currentUser} />
         )}
       </div>
 

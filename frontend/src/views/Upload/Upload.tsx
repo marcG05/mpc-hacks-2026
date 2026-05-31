@@ -30,7 +30,7 @@ export function Upload({ onAnalyze }: UploadProps) {
   }
 
   return (
-    <div className="content">
+    <div className="content" style={{overflow: "hidden"}}>
       <div className="upload-stage">
         {!running ? (
           <div>
