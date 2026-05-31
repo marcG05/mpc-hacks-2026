@@ -1,10 +1,9 @@
 import type { Transaction, LogEntry, Metrics } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${BASE_URL}/engine${path}`, {
-    credentials: 'include',
     ...options,
   });
   if (!response.ok) {
