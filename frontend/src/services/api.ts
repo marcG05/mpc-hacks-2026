@@ -65,3 +65,46 @@ export async function recordDecision(payload: { tx: string; card: string; action
 export async function fetchSummary(): Promise<{ total: number; fraudCount: number; suspiciousCount: number; legitimateCount: number; avgScore: number }> {
   return request('/summary');
 }
+
+export async function fetchConfig(): Promise<any> {
+  const response = await fetch('/tuner/api/config');
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to fetch tuner config (${response.status}): ${text}`);
+  }
+  return response.json();
+}
+
+export async function saveConfig(config: any): Promise<any> {
+  const response = await fetch('/tuner/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to save tuner config (${response.status}): ${text}`);
+  }
+  return response.json();
+}
+
+export async function resetConfig(): Promise<any> {
+  const response = await fetch('/tuner/api/config/reset', {
+    method: 'POST',
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to reset tuner config (${response.status}): ${text}`);
+  }
+  return response.json();
+}
+
+export async function fetchConfigDefaults(): Promise<any> {
+  const response = await fetch('/tuner/api/config/defaults');
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to fetch tuner defaults (${response.status}): ${text}`);
+  }
+  return response.json();
+}
+

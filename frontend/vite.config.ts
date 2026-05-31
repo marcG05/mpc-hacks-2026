@@ -9,6 +9,11 @@ export default defineConfig({
       '/engine': {
         target: 'http://api:3000',
         changeOrigin: true,
+      },
+      '/tuner': {
+        target: 'http://tuner:5555',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/tuner/, '')
       }
     }
   }
